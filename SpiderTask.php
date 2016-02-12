@@ -3,6 +3,7 @@ include_once(dirname(__FILE__).'/Config.php');
 include_once('UrlAnalyzer.class.php');
 include_once('ESClient.class.php');
 include_once('TaskManager.class.php');
+include_once('Util.class.php');
 
 //处理爬虫任务队列
 while(true){
@@ -15,30 +16,46 @@ while(true){
 	}
 }
 
-//处理一个爬虫任务
+//处理一个新爬虫任务
 function handleSpiderTask($task){
-	echo "\n-------------------------".date("Y-m-d H:i:s")." Spider Task ( level ".$task['level']." )-------------------\n";
+	if($task['type']=='new')
+		echo "\n----------------------------- New Task -----------------------------\n";
+	else
+		echo "\n---------------------------- Update Task ---------------------------\n";
+	
+	echo "Time: ".date("Y-m-d H:i:s")."  ";
+	$delay=time()-$task['time'];
+	$h=intval($delay/3600);
+	$m=intval(($delay-$h*3600)/60);
+	$s=intval(($delay-$h*3600)%60);
+	if($h>12)
+		Util::echoRed("Delay: ".$h.' hours '.$m.' minutes '.$s." seconds\n");
+	else
+		Util::echoGreen("Delay: ".$h.' hours '.$m.' minutes '.$s." seconds\n");
+	echo "Level: ".$task['level']."\n";
+	echo "TaskUrl: ".$task['url']."\n";
+	
+	//获取URL信息
 	$urlinfo=UrlAnalyzer::getInfo($task['url']);
 	//当返回数据不为空时
 	if($urlinfo['html']!=false){
-		echo 'linkUrl: '.$task['url']."\n";
-		echo 'trueUrl: '.$urlinfo['url']."\n";
-		echo 'siteTitle:'.$urlinfo['title']."\n";
-
 		//保存urlinfo到es
-		ESClient::storeUrlInfo($urlinfo);
+		//ESClient::storeUrlInfo($urlinfo);
+		//添加更新任务
+		$updatetime=TaskManager::addUpdateTask($urlinfo['url'],$task['level']);
 
-		//添加到更新队列,定时更新
-		TaskManager::addUpdateTask($urlinfo['url'],$task['level'],$task['url']);
-		
+		Util::echoGreen("Process result: \n");
+		echo 'Url: '.$urlinfo['url']."\n";
+		echo 'Title: '.$urlinfo['title']."\n";
+		echo 'Charset: '.$urlinfo['charset']."\n";
+		echo 'Updatetime: '.$updatetime."\n";
+
 		//当level>0时，尝试将连接加入爬虫任务队列
 		if($task['level']>0 && count($urlinfo['links'])>0){
 			foreach ($urlinfo['links'] as $link) {
-				TaskManager::addSpiderTask($link,$task['level']-1);
+				TaskManager::addNewTask($link,$task['level']-1);
 			}
 		}
 	}
-	else{
-		echo "process failed , code=".$urlinfo['code']."\n\n";	
-	}
+	echo "------------------------------------------------------------------------------\n\n";
 }

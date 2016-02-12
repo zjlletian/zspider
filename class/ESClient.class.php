@@ -13,7 +13,7 @@ class ESClient {
 		
 		$upsert = $urlinfo;
 		$upsert['view'] = 0;
-		self::updateDocByDoc('zsearch','websites',md5($urlinfo['url']),$urlinfo,$upsert);
+		self::updateDocByDoc('zspider','websites',md5($urlinfo['url']),$urlinfo,$upsert);
 		unset($upsert);
 	}
 	

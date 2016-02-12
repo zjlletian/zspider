@@ -17,14 +17,14 @@ $GLOBALS['ESHOST'] = array('http://localhost:9200');
 //Mongodb地址，爬虫队列，更新队列
 $GLOBALS['MONGODB'] = 'localhost:27017';
 
-//----------------------------------爬虫相关配置---------------------------------------
+//----------------------------------爬虫相关规则配置---------------------------------------
 
-//不进行追踪的href(全匹配)
+//不进行追踪的href (完全匹配以下字段)
 $GLOBALS['NOTTRACE_MATCH'] = array(
 	'/'
 );
 
-//不进行追踪的href(开头)
+//不进行追踪的href (以以下字段开头)
 $GLOBALS['NOTTRACE_BEGIN'] = array(
 	'#',
 	'ftp:',
@@ -32,7 +32,7 @@ $GLOBALS['NOTTRACE_BEGIN'] = array(
 	'javascript:'
 );
 
-//不进行追踪的href(包涵)
+//不进行追踪的href (包涵以下字段)
 $GLOBALS['NOTTRACE_WITH'] = array(
 	'login',
 	'logout',
@@ -41,14 +41,16 @@ $GLOBALS['NOTTRACE_WITH'] = array(
 	'passport'
 );
 
-//白名单(包涵)
-$GLOBALS['WHITE'] = array();
-
 //默认更新周期，七天
-$GLOBALS['UPDATE_CYCLE'] = 3600*24*7;
+$GLOBALS['UPDATE_TIME'] = 60; //3600*24*7
 
-//快速更新站点
-$GLOBALS['UPDATE_SITE'] = array(
-	'http://www.ifeng.com/'=>array('time'=>3600*24,'level'=>0),
-	'http://www.csdn.net/'=>array('time'=>3600*24,'level'=>0)
+//自定义站点更新周期与等级
+$GLOBALS['SITE_UPDATE'] = array(
+	'http://www.ifeng.com/'=>array('time'=>3600*24,'level'=>1),
+	'http://www.csdn.net/'=>array('time'=>3600*24,'level'=>1)
+);
+
+//不进行更新的url (包涵以下字段)
+$GLOBALS['NOTUPDATE_WITH'] = array(
+	'http://news.ifeng.com/a/'
 );

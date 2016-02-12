@@ -1,24 +1,30 @@
 <?php
 include_once(dirname(dirname(__FILE__)).'/Config.php');
 include_once('Util.class.php');
+include_once('TaskManager.class.php');
 include_once('SimpleHtmlDom.php');
 
 class UrlAnalyzer{
 
 	//获取url的信息。
-	static function getInfo($url,$referer=null){
-		$response=self::getResponse($url,$referer);
-		//若获取网页信息失败，再重试两次
-		$count=1;
-		while($response['code']/100!=2){
-			$response=self::getResponse($url,$referer);
-			if(++$count==3){
+	static function getInfo($url){
+		
+		//如果失败，尝试三次
+		for($count=0; $count<3; $count++){
+			$response=self::getResponse($url);
+
+			if(intval($response['code']/100)==3){
+				Util::echoRed("Get urlinfo failed, too mach redirect.\n");
 				break;
 			}
-		}
-		//若使用referer三次尝试失败，不使用$referer尝试一次
-		if($referer!=null||$response['code']/100!=2){
-			$response=self::getResponse($url);
+			if(intval($response['code']/100)==6){
+				Util::echoRed("Get urlinfo failed, redirect url had been handled.\n");
+				break;
+			}
+			if($response['html']!=false){
+				break;
+			}
+			Util::echoRed("Get urlinfo failed, Code=".$response['code']."\n");
 		}
 		return $response;
 	}
@@ -26,22 +32,22 @@ class UrlAnalyzer{
 	//获取url的信息：trueurl重定向后的地址，code状态码，html网页内容，charset原始字符编码
 	private static function getResponse($url,$referer=null){
 		$response = array();
-		$ch = curl_init();
 		try{
-		 	curl_setopt($ch, CURLOPT_URL, $url);
-
+			$ch = curl_init();
+			curl_setopt($ch, CURLOPT_URL, $url);
 		 	//设置连接超时时间
 		 	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, 5000);
 		 	//设置超时时间
 		 	curl_setopt($ch, CURLOPT_TIMEOUT_MS, 5000);
 		 	//1将结果返回，0直接stdout
 		    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-		    //支持30x重定向
-		    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-		    //最大重定向次数
-		    curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
 		    //支持gzip
 		    curl_setopt($ch, CURLOPT_ENCODING, "gzip");
+		    //支持30x重定向
+		    //curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+		    //最大重定向次数
+		    //curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
+
 		    //处理header
 			$header = array();
 			$header[] = "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"; 
@@ -57,17 +63,42 @@ class UrlAnalyzer{
 		    }
 			curl_setopt($ch, CURLOPT_HTTPHEADER,$header);
 
-			$htmltext = curl_exec($ch);
-			$responseheader = curl_getinfo($ch);
-			$response['url'] = $responseheader['url'];
-			$response['code'] = $responseheader['http_code'];
-			$contentType = strtr(strtoupper($responseheader['content_type']), array(' '=>'','\t'=>'',';'=>'','@'=>''));
+			//判断重定向
+			for($loops = 0;$loops<5;$loops++) {
+				$htmltext = curl_exec($ch);
+				$responseheader = curl_getinfo($ch);
+				$response['url'] = $responseheader['url'];
+				$response['code'] = $responseheader['http_code'];
 
-			//访问成功,并且是网页类型
-			if($response['code']/100==2||Util::strStartWith($contentType,'TEXT/HTML')) {
+				//没有重定向则退出循环
+				if(intval($response['code']/100)!=3){
+					break;
+				}
+				else{
+					$redirect_url=$responseheader['redirect_url'];
+					echo "Redirect: ".$redirect_url."\n";
+					//如果重定向的地址是否可以处理
+					if(TaskManager::isCanBeHandled($redirect_url)){
+						$response['html'] = false;
+						$response['code'] = 600;
+						return $response;
+					}
+					curl_setopt($ch, CURLOPT_URL, $redirect_url);
+				}
+			}
 
-				//字符编码转换 
-				$charset = trim(trim($contentType,'TEXT/HTML'),'CHARSET=');
+			//判断是否访问成功,并且是文档类型是text/html
+			$contentType = strtr(strtoupper($responseheader['content_type']), array(' '=>'','\t'=>'','@'=>''));
+			if(intval($response['code'])/100==2 && strpos($contentType,'TEXT/HTML')!==false) {
+				//获取字符编码并转换 
+				$charset ='';
+				foreach (explode(";",$contentType) as $ct) {
+					$ctkv=explode("=",$ct);
+					if(count($ctkv)==2 && $ctkv[0]=='CHARSET'){
+						$charset=$ctkv[1];
+						break;
+					}
+				}
 				if($charset ==''){
 					$charset = mb_detect_encoding($htmltext, array('ASCII','UTF-8','GB2312','GBK'));
 				}
@@ -81,7 +112,7 @@ class UrlAnalyzer{
 				$htmldom = new simple_html_dom();
 				$htmldom->load($htmltext);
 
-				$response['title']=$htmldom->find('title',0)->innertext;
+				$response['title']=trim($htmldom->find('title',0)->innertext);
 				$response['charset']= $charset;
 				$response['html'] = $htmltext;
 				
@@ -113,6 +144,7 @@ class UrlAnalyzer{
 
 	//修正url路径
 	private static function transformHref($href,$baseurl){
+
 		//不处理的超链接，全匹配
 		if(in_array($href,$GLOBALS['NOTTRACE_MATCH'])||empty($href)) { 
 			return false;
@@ -124,9 +156,10 @@ class UrlAnalyzer{
 		}
 		//不处理的超链接，包涵
 		foreach ($GLOBALS['NOTTRACE_WITH'] as $nottrace) {
-			if(strpos($href,$nottrace) != false)
+			if(strpos($href,$nottrace) !== false)
 				return false;
 		}
+
 		//以协议开头的,直接使用
 		if(Util::strStartWith($href,'http://')||Util::strStartWith($href,'https://')) { 
 			return $href;
@@ -152,12 +185,12 @@ class UrlAnalyzer{
 			$baseurl=ltrim($baseurl,$protocol);
 			//去除url后面的参数
 			$argpos=strpos($baseurl,"?");
-			if($argpos!=false){
+			if($argpos!==false){
 				$baseurl=substr($baseurl,0,$argpos);
 			}
 			//去除url后面的#
 			$sharppos=strpos($baseurl,"#");
-			if($sharppos!=false){
+			if($sharppos!==false){
 				$baseurl=substr($baseurl,0,$sharppos);
 			}
 			//继承baseurl地址的绝对路径或相对路径
@@ -165,7 +198,7 @@ class UrlAnalyzer{
 				$hostpos=strpos($baseurl,"/");
 				$href=ltrim($href,'/');
 			}
-			else{ 
+			else{
 				$hostpos=strrpos($baseurl,"/");
 			}
 			if($hostpos!=false){
