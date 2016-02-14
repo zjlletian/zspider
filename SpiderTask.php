@@ -1,15 +1,18 @@
 <?php
 include_once(dirname(__FILE__).'/Config.php');
 include_once('UrlAnalyzer.class.php');
-include_once('ESClient.class.php');
+include_once('UrlInfo.class.php');
 include_once('TaskManager.class.php');
 include_once('Util.class.php');
 
+TaskManager::addNewTask('http://www.baidu.com',1);
+
 //处理爬虫任务队列
 while(true){
-	$task=TaskManager::getSpiderTask();
+	$task=TaskManager::getTask();
 	if($task!=null){
 		handleSpiderTask($task);
+		TaskManager::ackTask($task);
 	}
 	else{
 		sleep(2);
@@ -28,8 +31,10 @@ function handleSpiderTask($task){
 	$h=intval($delay/3600);
 	$m=intval(($delay-$h*3600)/60);
 	$s=intval(($delay-$h*3600)%60);
-	if($h>12)
+	if($h>24)
 		Util::echoRed("Delay: ".$h.' hours '.$m.' minutes '.$s." seconds\n");
+	elseif($h>12)
+		Util::echoYellow("Delay: ".$h.' hours '.$m.' minutes '.$s." seconds\n");
 	else
 		Util::echoGreen("Delay: ".$h.' hours '.$m.' minutes '.$s." seconds\n");
 	echo "Level: ".$task['level']."\n";
@@ -39,8 +44,8 @@ function handleSpiderTask($task){
 	$urlinfo=UrlAnalyzer::getInfo($task['url']);
 	//当返回数据不为空时
 	if($urlinfo['html']!=false){
-		//保存urlinfo到es
-		//ESClient::storeUrlInfo($urlinfo);
+		//保存urlinfo
+		UrlInfo::saveUrlInfo($urlinfo);
 		//添加更新任务
 		$updatetime=TaskManager::addUpdateTask($urlinfo['url'],$task['level']);
 

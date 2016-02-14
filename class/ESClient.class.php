@@ -3,19 +3,6 @@ include_once(dirname(dirname(__FILE__)).'/Config.php');
 include_once('elasticsearch/vendor/autoload.php');
 
 class ESClient {
-
-	//保存URL信息到ES
-	static function storeUrlInfo($urlinfo){
-
-		$urlinfo['time'] = date("Y-m-d H:i:s");
-		unset($urlinfo['code']);
-		unset($urlinfo['links']);
-		
-		$upsert = $urlinfo;
-		$upsert['view'] = 0;
-		self::updateDocByDoc('zspider','websites',md5($urlinfo['url']),$urlinfo,$upsert);
-		unset($upsert);
-	}
 	
 	static private $esclient=null;
 

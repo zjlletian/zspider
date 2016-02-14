@@ -17,8 +17,20 @@ class UrlAnalyzer{
 				Util::echoRed("Get urlinfo failed, too mach redirect.\n");
 				break;
 			}
-			if(intval($response['code']/100)==6){
-				Util::echoRed("Get urlinfo failed, redirect url had been handled.\n");
+			if($response['code']==600){
+				Util::echoYellow("Get urlinfo failed, redirect url has been handled.\n");
+				break;
+			}
+			if($response['code']==601){
+				Util::echoYellow("Get urlinfo failed, redirect url contains unvalible string.\n");
+				break;
+			}
+			if($response['code']==602){
+				Util::echoYellow("Get urlinfo failed, doctype is not html.\n");
+				break;
+			}
+			if($response['code']==603){
+				Util::echoRed("Get urlinfo failed, can't get charset.\n");
 				break;
 			}
 			if($response['html']!=false){
@@ -48,7 +60,7 @@ class UrlAnalyzer{
 		    //最大重定向次数
 		    //curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
 
-		    //处理header
+		    //处理header,模拟google浏览器
 			$header = array();
 			$header[] = "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"; 
 			$header[] = "Accept-Encoding: gzip";
@@ -64,7 +76,7 @@ class UrlAnalyzer{
 			curl_setopt($ch, CURLOPT_HTTPHEADER,$header);
 
 			//判断重定向
-			for($loops = 0;$loops<5;$loops++) {
+			for($loops=0; $loops<5; $loops++) {
 				$htmltext = curl_exec($ch);
 				$responseheader = curl_getinfo($ch);
 				$response['url'] = $responseheader['url'];
@@ -83,6 +95,11 @@ class UrlAnalyzer{
 						$response['code'] = 600;
 						return $response;
 					}
+					if(!self::checkHref($redirect_url)){
+						$response['html'] = false;
+						$response['code'] = 601;
+						return $response;
+					}
 					curl_setopt($ch, CURLOPT_URL, $redirect_url);
 				}
 			}
@@ -90,7 +107,8 @@ class UrlAnalyzer{
 			//判断是否访问成功,并且是文档类型是text/html
 			$contentType = strtr(strtoupper($responseheader['content_type']), array(' '=>'','\t'=>'','@'=>''));
 			if(intval($response['code'])/100==2 && strpos($contentType,'TEXT/HTML')!==false) {
-				//获取字符编码并转换 
+
+				//使用content_type获取字符编码 
 				$charset ='';
 				foreach (explode(";",$contentType) as $ct) {
 					$ctkv=explode("=",$ct);
@@ -99,15 +117,20 @@ class UrlAnalyzer{
 						break;
 					}
 				}
+				//若未检出编码，使用编码检测函数检出编码
 				if($charset ==''){
-					$charset = mb_detect_encoding($htmltext, array('ASCII','UTF-8','GB2312','GBK'));
+					$charset = mb_detect_encoding($htmltext, array('UTF-8','GBK','GB2312'));
 				}
+				//如果未检测出字符编码则返回错误，否则字符集转换为UTF-8
 				if($charset ==''){
-					$charset = "UTF-8";
+					$response['code'] = 603;
+		    		$response['html'] = false;
+		    		return $response;
 				}
-				if ($charset != "UTF-8"){
+				elseif ($charset != "UTF-8"){
 					$htmltext = mb_convert_encoding($htmltext, 'UTF-8', $charset);
 				}
+
 				//网页标题
 				$htmldom = new simple_html_dom();
 				$htmldom->load($htmltext);
@@ -131,6 +154,9 @@ class UrlAnalyzer{
 			}
 			else{
 				$response['html'] = false;
+				if(strpos($contentType,'TEXT/HTML')===false){
+					$response['code'] = 602;
+				}
 			}
 		}
 		catch(Exception $e) {
@@ -142,9 +168,8 @@ class UrlAnalyzer{
 	    return $response;
 	}
 
-	//修正url路径
-	private static function transformHref($href,$baseurl){
-
+	//检查href是否可用
+	static function checkHref($href){
 		//不处理的超链接，全匹配
 		if(in_array($href,$GLOBALS['NOTTRACE_MATCH'])||empty($href)) { 
 			return false;
@@ -158,6 +183,16 @@ class UrlAnalyzer{
 		foreach ($GLOBALS['NOTTRACE_WITH'] as $nottrace) {
 			if(strpos($href,$nottrace) !== false)
 				return false;
+		}
+		return true;
+	}
+
+	//修正url路径
+	private static function transformHref($href,$baseurl){
+
+		//检查href
+		if(!self::checkHref($href)){
+			return false;
 		}
 
 		//以协议开头的,直接使用

@@ -41,13 +41,12 @@ $GLOBALS['NOTTRACE_WITH'] = array(
 	'passport'
 );
 
-//默认更新周期，七天
-$GLOBALS['UPDATE_TIME'] = 60; //3600*24*7
+//默认更新周期
+$GLOBALS['UPDATE_TIME'] = 3600*24*2;
 
 //自定义站点更新周期与等级
 $GLOBALS['SITE_UPDATE'] = array(
-	'http://www.ifeng.com/'=>array('time'=>3600*24,'level'=>1),
-	'http://www.csdn.net/'=>array('time'=>3600*24,'level'=>1)
+	'http://news.ifeng.com/'=>array('level'=>1,'time'=>3600)
 );
 
 //不进行更新的url (包涵以下字段)

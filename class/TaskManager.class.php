@@ -1,5 +1,6 @@
 <?php
 include_once(dirname(dirname(__FILE__)).'/Config.php');
+include_once('Util.class.php');
 
 class TaskManager{
 
@@ -12,12 +13,38 @@ class TaskManager{
 	//不更新的url列表
 	private static $notUpdate;
 
+	//正在处理的队列
+	private static $onProcess;
+
 	//初始化连接
 	private static function connect(){
-		if(self::$mongo==null){
+		if(self::$mongo==null) {
+			//连接mongodb
 			self::$mongo = new Mongo($GLOBALS['MONGODB']);
 			self::$taskQueue = self::$mongo->zspider->taskqueue;
 			self::$notUpdate = self::$mongo->zspider->notupdate;
+			self::$onProcess = self::$mongo->zspider->onprocess;
+
+			//创建子进程，用于检测ack的超时，将超时的task重新加入队列中
+			$pid = pcntl_fork();
+			if ($pid == -1) {
+				Util::echoRed('Could not fork ackMonitor');
+				exit();
+			}
+			elseif(!$pid) {
+			    while(true) {
+					$task=self::$onProcess->findOne(array('acktime'=>array('$lte'=>time())));
+					if($task!=null){
+						self::$onProcess->remove($task);
+						unset($task['acktime']);
+						self::$taskQueue->insert($task);
+					}
+					else{
+						sleep(2);
+					}
+					unset($task);
+				}
+			}
 		}
 		return true;
 	}
@@ -25,7 +52,8 @@ class TaskManager{
 	//检查是否可以进行处理
 	static function isCanBeHandled($url) {
 		self::connect();
-		return self::$notUpdate->findOne(array('url'=>$url))!=null||self::$taskQueue->findOne(array('url'=>$url))!=null;
+		$ary=array('url'=>$url);
+		return self::$taskQueue->findOne($ary)!=null||self::$notUpdate->findOne($ary)!=null||self::$onProcess->findOne($ary)!=null;
 	}
 
 	//增加实时任务
@@ -68,26 +96,38 @@ class TaskManager{
 		self::$taskQueue->remove(array("url" => $url));
 
 		//分配更新时间
-		if(in_array($url,$GLOBALS['SITE_UPDATE'])){
-			$updatetime=time()+$GLOBALS['SITE_UPDATE'][$url]['time'];
-			$level=$GLOBALS['SITE_UPDATE'][$url]['level'];
-		}
-		else{
-			$updatetime=time()+$GLOBALS['UPDATE_TIME'];
+		$updatetime=time()+$GLOBALS['UPDATE_TIME'];
+		
+		if(isset($GLOBALS['SITE_UPDATE'][$url])){
+			if(isset($GLOBALS['SITE_UPDATE'][$url]['time']))
+				$updatetime=time()+$GLOBALS['SITE_UPDATE'][$url]['time'];
+			if(isset($GLOBALS['SITE_UPDATE'][$url]['level']))
+				$level=$GLOBALS['SITE_UPDATE'][$url]['level'];
 		}
 		self::$taskQueue->insert(array('url'=>$url,'level'=>$level,'time'=>$updatetime,'type'=>'update'));
 		return date("Y-m-d H:i:s",$updatetime);
 	}
 	
-	//获取最新的任务
-	static function getSpiderTask(){
+	//获取任务
+	static function getTask(){
 		self::connect();
 
 		//由于时间升序排列造成先进先出，形成广度优先遍历，深度越深，队列数据量大量上升，这里要注意磁盘的空间是否足够。
 		$task=self::$taskQueue->findOne(array('time'=>array('$lte'=>time())));
 		if($task!=null){
-			self::$taskQueue->remove($task);	
+			self::$taskQueue->remove($task);
+			//任务超时时间60秒，60秒后若没有响应则重新添加任务到队列中
+			$task['acktime']=time()+60;
+			self::$onProcess->insert($task);
 		}
 		return $task;
+	}
+
+	//任务ack
+	static function ackTask($task){
+		self::connect();
+
+		self::$onProcess->remove($task);
+		return true;
 	}
 }
