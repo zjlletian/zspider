@@ -6,109 +6,101 @@ include_once('SimpleHtmlDom.php');
 
 class UrlAnalyzer{
 
-	//获取url的信息。
+	//获取url的信息,尝试次数：3
 	static function getInfo($url){
-		
-		//如果失败，尝试三次
-		for($count=0; $count<3; $count++){
+		for($count=1; $count<=3; $count++){
 			$response=self::getResponse($url);
-
-			if(intval($response['code']/100)==3){
-				Util::echoRed("Get urlinfo failed, too mach redirect.\n");
+			if($response['html']!=null || $response['code']==600){
 				break;
 			}
-			if($response['code']==600){
-				Util::echoYellow("Get urlinfo failed, redirect url has been handled.\n");
-				break;
-			}
-			if($response['code']==601){
-				Util::echoYellow("Get urlinfo failed, redirect url contains unvalible string.\n");
-				break;
-			}
-			if($response['code']==602){
-				Util::echoYellow("Get urlinfo failed, doctype is not html.\n");
-				break;
-			}
-			if($response['code']==603){
-				Util::echoRed("Get urlinfo failed, can't get charset.\n");
-				break;
-			}
-			if($response['html']!=false){
-				break;
-			}
-			Util::echoRed("Get urlinfo failed, Code=".$response['code']."\n");
 		}
 		return $response;
 	}
 
-	//获取url的信息：trueurl重定向后的地址，code状态码，html网页内容，charset原始字符编码
+	//获取url的信息：url重定向后的地址，code状态码，html网页内容，charset原始字符编码
 	private static function getResponse($url,$referer=null){
+
+		$ch = curl_init();
+		//curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+	    //curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
+		curl_setopt($ch, CURLOPT_URL, $url);
+	 	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, 5000);//设置连接超时时间
+	 	curl_setopt($ch, CURLOPT_TIMEOUT_MS, 5000);//设置超时时间
+	    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);//1将结果返回，0直接stdout
+	    curl_setopt($ch, CURLOPT_ENCODING, "gzip");//支持gzip
+
+	    //处理request header,模拟google浏览器
+		$header = array();
+		$header[] = "Accept: text/html;q=0.8"; 
+		$header[] = "Accept-Encoding: gzip";
+		$header[] = "Accept-Language: zh,zh-CN;q=0.8"; 
+		$header[] = "Cache-Control: max-age=0"; 
+		$header[] = "Connection: keep-alive"; 
+		$header[] = "Keep-Alive: 300";
+		$header[] = "Accept-Charset: utf-8,ISO-8859-1;q=0.7,*;q=0.7"; 
+		$header[] = "User-Agent:Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.13 Safari/537.36";
+	    if($referer){
+	    	$header[] = 'Referer: '.$referer;
+	    }
+		curl_setopt($ch, CURLOPT_HTTPHEADER,$header);
+		unset($header);
+
 		$response = array();
+		$htmltext='';
 		try{
-			$ch = curl_init();
-			curl_setopt($ch, CURLOPT_URL, $url);
-		 	//设置连接超时时间
-		 	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, 5000);
-		 	//设置超时时间
-		 	curl_setopt($ch, CURLOPT_TIMEOUT_MS, 5000);
-		 	//1将结果返回，0直接stdout
-		    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-		    //支持gzip
-		    curl_setopt($ch, CURLOPT_ENCODING, "gzip");
-		    //支持30x重定向
-		    //curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-		    //最大重定向次数
-		    //curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
-
-		    //处理header,模拟google浏览器
-			$header = array();
-			$header[] = "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"; 
-			$header[] = "Accept-Encoding: gzip";
-			$header[] = "Accept-Language: zh,zh-CN;q=0.8"; 
-			$header[] = "Cache-Control: max-age=0"; 
-			$header[] = "Connection: keep-alive"; 
-			$header[] = "Keep-Alive: 300";
-			$header[] = "Accept-Charset: utf-8,ISO-8859-1;q=0.7,*;q=0.7"; 
-			$header[] = "User-Agent:Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.13 Safari/537.36";
-		    if($referer){
-		    	$header[] = 'Referer: '.$referer;
-		    }
-			curl_setopt($ch, CURLOPT_HTTPHEADER,$header);
-
-			//判断重定向
+			//执行请求，对重定向地址循环执行，最大重定向次数5
 			for($loops=0; $loops<5; $loops++) {
 				$htmltext = curl_exec($ch);
 				$responseheader = curl_getinfo($ch);
 				$response['url'] = $responseheader['url'];
 				$response['code'] = $responseheader['http_code'];
 
-				//没有重定向则退出循环
-				if(intval($response['code']/100)!=3){
-					break;
-				}
-				else{
-					$redirect_url=$responseheader['redirect_url'];
-					echo "Redirect: ".$redirect_url."\n";
-					//如果重定向的地址是否可以处理
-					if(TaskManager::isCanBeHandled($redirect_url)){
-						$response['html'] = false;
-						$response['code'] = 600;
-						return $response;
+				//判断地址是否被重定向，没有重定向则退出循环.301重定向在curl中的code是200，要用$response['url']!=$url判断
+				if(intval($response['code']/100)==3 || $response['url']!=$url){
+					if(empty($responseheader['redirect_url'])){
+						$redirect_url=$response['url'];
+						Util::echoYellow("Redirect[301]: ".$redirect_url."\n");
 					}
+					else{
+						$redirect_url=$responseheader['redirect_url'];
+						Util::echoYellow("Redirect[302]: ".$redirect_url."\n");
+					}
+					$url=$redirect_url;
+
+					//判断重定向的地址是否已经处理
+					if(TaskManager::isHandled($redirect_url)){
+						$response['code'] = 600;
+						throw new Exception("Get urlinfo cancle, redirect url has been or is being handled.\n");
+					}
+					//检查重定向地址是否有效
 					if(!self::checkHref($redirect_url)){
-						$response['html'] = false;
-						$response['code'] = 601;
-						return $response;
+						$response['code'] = 600;
+						throw new Exception("Get urlinfo cancle, redirect url was marked to not trace.\n");
 					}
 					curl_setopt($ch, CURLOPT_URL, $redirect_url);
 				}
+				else{
+					break;
+				}
 			}
 
-			//判断是否访问成功,并且是文档类型是text/html
-			$contentType = strtr(strtoupper($responseheader['content_type']), array(' '=>'','\t'=>'','@'=>''));
-			if(intval($response['code'])/100==2 && strpos($contentType,'TEXT/HTML')!==false) {
+			//判断是否重定向超过次数限制
+			if(intval($response['code']/100)==3 || $response['url']!=$url){
+				$response['code']=600;
+				throw new Exception("Get urlinfo cancle, too mach redirect.\n");
+			}
 
-				//使用content_type获取字符编码 
+			//判断是否访问成功
+			if(intval($response['code'])/100==2) {
+
+				//判断文档类型是否为text/html
+				$contentType = strtr(strtoupper($responseheader['content_type']), array(' '=>'','\t'=>'','@'=>''));
+				if(strpos($contentType,'TEXT/HTML')===false){
+					$response['code'] = 600;
+					throw new Exception("Get urlinfo cancle, doctype is not html.\n");
+				}
+
+				//使用content_type获取字符编码，若未检出，则使用编码检测函数检测方式获取
 				$charset ='';
 				foreach (explode(";",$contentType) as $ct) {
 					$ctkv=explode("=",$ct);
@@ -117,15 +109,13 @@ class UrlAnalyzer{
 						break;
 					}
 				}
-				//若未检出编码，使用编码检测函数检出编码
 				if($charset ==''){
 					$charset = mb_detect_encoding($htmltext, array('UTF-8','GBK','GB2312'));
 				}
 				//如果未检测出字符编码则返回错误，否则字符集转换为UTF-8
 				if($charset ==''){
-					$response['code'] = 603;
-		    		$response['html'] = false;
-		    		return $response;
+					$response['code'] = 600;
+		    		throw new Exception("Get urlinfo cancle, unknown charset.\n");
 				}
 				elseif ($charset != "UTF-8"){
 					$htmltext = mb_convert_encoding($htmltext, 'UTF-8', $charset);
@@ -136,6 +126,10 @@ class UrlAnalyzer{
 				$htmldom->load($htmltext);
 
 				$response['title']=trim($htmldom->find('title',0)->innertext);
+				if(empty($response['title'])){
+					$response['code'] = 600;
+					throw new Exception("Get urlinfo cancle, site has no title.\n");
+				}
 				$response['charset']= $charset;
 				$response['html'] = $htmltext;
 				
@@ -151,20 +145,22 @@ class UrlAnalyzer{
 			    $response['links']=$links;
 				$htmldom->clear();
 				unset($htmldom);
+				Util::echoGreen("Get urlinfo succeed. \n");
 			}
 			else{
-				$response['html'] = false;
-				if(strpos($contentType,'TEXT/HTML')===false){
-					$response['code'] = 602;
-				}
+				throw new Exception();
 			}
 		}
 		catch(Exception $e) {
-		    $response['code'] = 0;
-		    $response['html'] = false;
+			if($response['code']!=600)
+				Util::echoRed("Get urlinfo failed, Code=".$response['code']."\n");
+			else
+				Util::echoYellow($e->getMessage());
+		    $response['html'] = null;
 		}
 		curl_close($ch);
 		unset($ch);
+		unset($htmltext);
 	    return $response;
 	}
 
@@ -180,7 +176,7 @@ class UrlAnalyzer{
 				return false;
 		}
 		//不处理的超链接，包涵
-		foreach ($GLOBALS['NOTTRACE_WITH'] as $nottrace) {
+		foreach ($GLOBALS['NOTTRACE_HAS'] as $nottrace) {
 			if(strpos($href,$nottrace) !== false)
 				return false;
 		}

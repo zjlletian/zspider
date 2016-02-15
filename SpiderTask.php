@@ -1,11 +1,22 @@
 <?php
 include_once(dirname(__FILE__).'/Config.php');
+include_once('ElasticSearch.class.php');
 include_once('UrlAnalyzer.class.php');
 include_once('UrlInfo.class.php');
 include_once('TaskManager.class.php');
 include_once('Util.class.php');
 
-TaskManager::addNewTask('http://www.baidu.com',1);
+//初始化爬虫
+Util::echoYellow("ZSpider init...\n");
+
+//连接到elasticsearch
+ElasticSearch::connect();
+
+//连接到mongodb，启动ack子进程
+TaskManager::init();
+
+//添加默认起点任务
+TaskManager::addNewTask('http://www.baidu.com',2);
 
 //处理爬虫任务队列
 while(true){
@@ -17,43 +28,43 @@ while(true){
 	else{
 		sleep(2);
 	}
+	unset($task);
 }
 
-//处理一个新爬虫任务
+//处理一个爬虫任务
 function handleSpiderTask($task){
-	if($task['type']=='new')
-		echo "\n----------------------------- New Task -----------------------------\n";
-	else
-		echo "\n---------------------------- Update Task ---------------------------\n";
-	
-	echo "Time: ".date("Y-m-d H:i:s")."  ";
+	echo "\n\n[".date("Y-m-d H:i:s")."] ";
+	echo "Task Url: ".$task['url']."\n";
+	echo "Type:".($task['type']=='new'? "New  ":"Update  ");
+	echo "Level:".$task['level']."  ";
 	$delay=time()-$task['time'];
 	$h=intval($delay/3600);
 	$m=intval(($delay-$h*3600)/60);
 	$s=intval(($delay-$h*3600)%60);
+	$delaystr="Delay: ".$h.' hours '.$m.' minutes '.$s." seconds\n";
 	if($h>24)
-		Util::echoRed("Delay: ".$h.' hours '.$m.' minutes '.$s." seconds\n");
+		Util::echoRed($delaystr);
 	elseif($h>12)
-		Util::echoYellow("Delay: ".$h.' hours '.$m.' minutes '.$s." seconds\n");
+		Util::echoYellow($delaystr);
 	else
-		Util::echoGreen("Delay: ".$h.' hours '.$m.' minutes '.$s." seconds\n");
-	echo "Level: ".$task['level']."\n";
-	echo "TaskUrl: ".$task['url']."\n";
-	
+		Util::echoGreen($delaystr);
+	unset($delay);
+	unset($delaystr);
+	echo "------------------------------------------------------------------------------\n";
+
 	//获取URL信息
 	$urlinfo=UrlAnalyzer::getInfo($task['url']);
 	//当返回数据不为空时
-	if($urlinfo['html']!=false){
+	if($urlinfo['html']!=null){
+		
 		//保存urlinfo
 		UrlInfo::saveUrlInfo($urlinfo);
-		//添加更新任务
-		$updatetime=TaskManager::addUpdateTask($urlinfo['url'],$task['level']);
-
-		Util::echoGreen("Process result: \n");
 		echo 'Url: '.$urlinfo['url']."\n";
 		echo 'Title: '.$urlinfo['title']."\n";
 		echo 'Charset: '.$urlinfo['charset']."\n";
-		echo 'Updatetime: '.$updatetime."\n";
+
+		//添加更新任务
+		echo 'Updatetime: '.TaskManager::addUpdateTask($urlinfo['url'],$task['level'])."\n";
 
 		//当level>0时，尝试将连接加入爬虫任务队列
 		if($task['level']>0 && count($urlinfo['links'])>0){
@@ -62,5 +73,6 @@ function handleSpiderTask($task){
 			}
 		}
 	}
-	echo "------------------------------------------------------------------------------\n\n";
+	unset($UrlInfo);
+	echo "------------------------------------------------------------------------------\n";
 }

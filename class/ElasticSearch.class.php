@@ -1,15 +1,18 @@
 <?php 
 include_once(dirname(dirname(__FILE__)).'/Config.php');
 include_once('elasticsearch/vendor/autoload.php');
+include_once('Util.class.php');
 
-class ESClient {
+class ElasticSearch {
 	
 	static private $esclient=null;
 
 	//建立连接
-	static private function connect(){
+	static function connect(){
+		echo "Connect to ElasticSearch... ";
 		if(self::$esclient==null){
-			self::$esclient = Elasticsearch\ClientBuilder::create()->setHosts($GLOBALS['ESHOST'])->build();
+			self::$esclient = Elasticsearch\ClientBuilder::create()->setHosts($GLOBALS['ELASTICSEARCH'])->build();
+			Util::echoGreen("[ok]\n");
 		}
 		return true;
 	}
@@ -17,7 +20,6 @@ class ESClient {
 	//创建Index
 	static function createIndex($index){
 		try{
-			self::connect();
 			$params = [
 				'index' => $index
 			];
@@ -31,7 +33,6 @@ class ESClient {
 	//删除Index
 	static function deleteIndex($index){
 		try{
-			self::connect();
 			$params = [
 				'index' => $index
 			];
@@ -45,7 +46,6 @@ class ESClient {
 	//根据index,$type,id获取document
 	static function getDocById($index,$type,$id){
 		try{
-			self::connect();
 			$params = [
 			    'index' => $index,
 			    'type' => $type,
@@ -61,7 +61,6 @@ class ESClient {
 	//根据index,$type,id删除document
 	static function deleteDocById($index,$type,$id){
 		try{
-			self::connect();
 			$params = [
 			    'index' => $index,
 			    'type' => $type,
@@ -72,13 +71,11 @@ class ESClient {
 		catch(Exception $e){
 			return false;
 		}
-		
 	}
 
 	//插入document
 	static function insertDoc($index,$type,$id,$docbody){
 		try{
-			self::connect();
 			$params = [
 			    'index' => $index,
 			    'type' => $type,
@@ -96,7 +93,6 @@ class ESClient {
 	//更新document
 	static function updateDocByDoc($index,$type,$id,$docbody,$upsert=null){
 		try{
-			self::connect();
 			$params = [
 			    'index' => $index,
 			    'type' => $type,
@@ -135,14 +131,11 @@ class ESClient {
 		catch(Exception $e){
 			return false;
 		}
-		self::connect();
-		
 	}
 
 	//复杂查询
 	static function search($index,$type,$body){
 		try{
-			self::connect();
 			$params = [
 			    'index' => $index,
 			    'type' => $type,

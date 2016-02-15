@@ -1,6 +1,9 @@
 <?php 
 include_once(dirname(dirname(__FILE__)).'/Config.php');
-include_once('ESClient.class.php');
+include_once('ElasticSearch.class.php');
+
+define('ES_INDEX','zspider');
+define('ES_TYPE','websites');
 
 class UrlInfo{
 
@@ -13,7 +16,7 @@ class UrlInfo{
 		
 		$upsert = $urlinfo;
 		$upsert['view'] = 0;
-		ESClient::updateDocByDoc('zspider','websites',md5($urlinfo['url']),$urlinfo,$upsert);
+		ElasticSearch::updateDocByDoc(ES_INDEX,ES_TYPE,md5($urlinfo['url']),$urlinfo,$upsert);
 		unset($upsert);
 	}
 }

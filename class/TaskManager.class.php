@@ -17,21 +17,25 @@ class TaskManager{
 	private static $onProcess;
 
 	//初始化连接
-	private static function connect(){
+	static function init(){
 		if(self::$mongo==null) {
 			//连接mongodb
+			echo "Connect to TaskQueue on MongoDB... ";
 			self::$mongo = new Mongo($GLOBALS['MONGODB']);
 			self::$taskQueue = self::$mongo->zspider->taskqueue;
 			self::$notUpdate = self::$mongo->zspider->notupdate;
 			self::$onProcess = self::$mongo->zspider->onprocess;
+			Util::echoGreen("[ok]\n");
 
 			//创建子进程，用于检测ack的超时，将超时的task重新加入队列中
+			echo "Fork ackMonitor progress...";
 			$pid = pcntl_fork();
 			if ($pid == -1) {
-				Util::echoRed('Could not fork ackMonitor');
+				Util::echoRed("[failed]\n");
 				exit();
 			}
 			elseif(!$pid) {
+				Util::echoGreen("[ok]\n");
 			    while(true) {
 					$task=self::$onProcess->findOne(array('acktime'=>array('$lte'=>time())));
 					if($task!=null){
@@ -49,17 +53,9 @@ class TaskManager{
 		return true;
 	}
 
-	//检查是否可以进行处理
-	static function isCanBeHandled($url) {
-		self::connect();
-		$ary=array('url'=>$url);
-		return self::$taskQueue->findOne($ary)!=null||self::$notUpdate->findOne($ary)!=null||self::$onProcess->findOne($ary)!=null;
-	}
-
 	//增加实时任务
-	static function addNewTask($url,$level,$force=false){
-		self::connect();
-		
+	static function addNewTask($url,$level){
+
 		//如果存在于不更新列表中则直接返回
 		if(self::$notUpdate->findOne(array('url'=>$url))!=null){
 			return false;
@@ -67,7 +63,7 @@ class TaskManager{
 
 		//若不存在队列中或者手动强制添加，则加入新任务。
 		$task=self::$taskQueue->findOne(array('url'=>$url));
-		if($task==null || $force) {
+		if($task==null) {
 			self::$taskQueue->insert(array('url'=>$url,'level'=>$level,'time'=>time(),'type'=>'new'));
 			return true;
 		}
@@ -81,36 +77,33 @@ class TaskManager{
 
 	//增加更新任务
 	static function addUpdateTask($url,$level){
-		self::connect();
-
 		//排除不更新的连接
-		foreach ($GLOBALS['NOTUPDATE_WITH'] as $notupdate) {
+		foreach ($GLOBALS['NOTUPDATE_HAS'] as $notupdate) {
 			if(strpos($url,$notupdate) !== false ){
 				self::$notUpdate->remove(array('url'=>$url));
 				self::$notUpdate->insert(array('url'=>$url));
 				return 'will not update';
 			}
 		}
-
 		//删除原有更新预约
 		self::$taskQueue->remove(array("url" => $url));
 
-		//分配更新时间
-		$updatetime=time()+$GLOBALS['UPDATE_TIME'];
-		
+		//分配默认更新时间
 		if(isset($GLOBALS['SITE_UPDATE'][$url])){
 			if(isset($GLOBALS['SITE_UPDATE'][$url]['time']))
 				$updatetime=time()+$GLOBALS['SITE_UPDATE'][$url]['time'];
 			if(isset($GLOBALS['SITE_UPDATE'][$url]['level']))
 				$level=$GLOBALS['SITE_UPDATE'][$url]['level'];
 		}
+		else{
+			$updatetime=time()+$GLOBALS['UPDATE_TIME'];
+		}
 		self::$taskQueue->insert(array('url'=>$url,'level'=>$level,'time'=>$updatetime,'type'=>'update'));
 		return date("Y-m-d H:i:s",$updatetime);
 	}
-	
+
 	//获取任务
 	static function getTask(){
-		self::connect();
 
 		//由于时间升序排列造成先进先出，形成广度优先遍历，深度越深，队列数据量大量上升，这里要注意磁盘的空间是否足够。
 		$task=self::$taskQueue->findOne(array('time'=>array('$lte'=>time())));
@@ -125,9 +118,29 @@ class TaskManager{
 
 	//任务ack
 	static function ackTask($task){
-		self::connect();
-
 		self::$onProcess->remove($task);
 		return true;
+	}
+
+	//判断地址是否需要处理
+	static function isHandled($url) {
+		//如果存在于不更新列表或者正在处理的列表中，标记为已处理
+		if(self::$notUpdate->findOne(array('url'=>$url))!=null||self::$onProcess->findOne(array('url'=>$url))!=null){
+			return true;
+		}
+		$task=self::$taskQueue->findOne(array('url'=>$url));
+		//如果不存在任务，标记为未处理
+		if($task==null){
+			return false;
+		}
+		//如果存在new类型任务或者（删除new任务，相当于提前处理）
+		if($task!=null && $task['type']=='new'){
+			Util::echoYellow("find a new-type task with same url, process ahead.\n");
+			self::$taskQueue->remove($task);
+			return false;
+		}
+		else{
+			return true;
+		}
 	}
 }
