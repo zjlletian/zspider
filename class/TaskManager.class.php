@@ -1,9 +1,12 @@
 <?php
 include_once(dirname(dirname(__FILE__)).'/Config.php');
+include_once('EsConnector.class.php');
 include_once('Util.class.php');
-include_once('Transporter.class.php');
 
-class TaskManager{
+define('ES_INDEX','zspider');
+define('ES_TYPE','websites');
+
+class TaskManager {
 
 	//mongodb客户端
 	private static $mongo;
@@ -20,48 +23,109 @@ class TaskManager{
 	//正在转储的队列
 	private static $transport;
 
-	//初始化连接
+	//主进程pid, 转储进程pid, ack监视进程pid
+	private static $mainPid;
+	private static $esPid;
+	private static $ackPid;
+
+	//初始化
 	static function init(){
 		if(self::$mongo==null) {
+			Util::echoYellow("Zspider Init...\n");
 			//连接mongodb
+			echo "Connect to TaskQueue on MongoDB... ";
 			self::$mongo = new Mongo($GLOBALS['MONGODB']);
 			self::$taskQueue = self::$mongo->zspider->taskqueue;
 			self::$notUpdate = self::$mongo->zspider->notupdate;
 			self::$onProcess = self::$mongo->zspider->onprocess;
 			self::$transport = self::$mongo->zspider->transport;
-			Util::echoYellow("Connect to TaskQueue on MongoDB... [ok]\n");
+			Util::echoGreen("[ok]\n");
 
-			//启动转储进程
-			Transporter::start();
+			//启动转储进程与ack监视进程
+			self::$esPid=self::startEsTransport();
+			self::$ackPid=self::srartAckWatcher();
 
-			//创建子进程，用于检测ack的超时，将超时的task重新加入队列中
-			$pid = pcntl_fork();
-			if ($pid == -1) {
-				Util::echoRed("Fork ackMonitor progress... [failed]\n");
-				exit();
-			}
-			elseif(!$pid) {
-				Util::echoYellow("Fork ackMonitor progress... [ok]\n");
-			    while(true) {
-					$task=self::$onProcess->findOne(array('acktime'=>array('$lte'=>time())));
-					if($task!=null){
-						self::$onProcess->remove($task);
-						unset($task['acktime']);
-						self::$taskQueue->insert($task);
-					}
-					else{
-						sleep(2);
-					}
-					unset($task);
-				}
-			}
+			//获取主进程pid
+			self::$mainPid=posix_getpid();
+			Util::echoYellow("ZSpider start, mainPid:".self::$mainPid.", esPid:".self::$esPid.", ackPid:".self::$ackPid."\n");
 		}
 		return true;
 	}
 
+	//创建用于从mongo到es的异步同步数据的子进程
+	private static function startEsTransport(){
+		//链接到es
+		echo "Connect to ElasticSearch... ";
+		if(ESConnector::connect()){
+			Util::echoGreen("[ok]\n");
+		}
+		else{
+			Util::echoRed("[failed]\n");
+			exit();
+		}
+		//创建子进程
+		echo "Fork data transport progress... ";
+		$pid = pcntl_fork();
+		if ($pid == -1) {
+			Util::echoRed("[failed]\n");
+			exit();
+		}
+		else if(!$pid) {
+		    while(true) {
+		    	$urlinfo=self::$transport->findOne();
+				if($urlinfo!=null){
+					self::$transport->remove($urlinfo);
+					unset($urlinfo['_id']);
+					$upsert = $urlinfo;
+					$upsert['view'] = 0;
+					EsConnector::updateDocByDoc(ES_INDEX,ES_TYPE,md5($urlinfo['url']),$urlinfo,$upsert);
+					unset($upsert);
+					unset($urlinfo);
+				}
+				else{
+					usleep(100000); //100毫秒
+				}
+			}
+		}
+		else{
+			Util::echoGreen("[ok]\n");
+		}
+		return $pid;
+	}
+
+	//创建用于检测ack的超时子进程，将超时的task重新加入队列中
+	private static function srartAckWatcher(){
+		echo "Fork ack watcher progress... ";
+		$pid = pcntl_fork();
+		if ($pid == -1) {
+			Util::echoRed("[failed]\n");
+			exit();
+		}
+		else if(!$pid) {
+		    while(true) {
+				$task=self::$onProcess->findOne(array('acktime'=>array('$lte'=>time())));
+				if($task!=null){
+					self::$onProcess->remove($task);
+					if(self::$taskQueue->findOne(array('url'=>$task['url']))==null){
+						unset($task['acktime']);
+						self::$taskQueue->insert($task);
+					}
+					unset($task);
+				}
+				else{
+					sleep(2);
+				}
+				unset($task);
+			}
+		}
+		else{
+			Util::echoGreen("[ok]\n");
+		}
+		return $pid;
+	}
+
 	//增加实时任务
 	static function addNewTask($url,$level){
-
 		//如果存在于不更新列表中则直接返回
 		if(self::$notUpdate->findOne(array('url'=>$url))!=null){
 			return false;
@@ -115,8 +179,8 @@ class TaskManager{
 		$task=self::$taskQueue->findOne(array('time'=>array('$lte'=>time())));
 		if($task!=null){
 			self::$taskQueue->remove($task);
-			//任务超时时间60秒，60秒后若没有响应则重新添加任务到队列中
-			$task['acktime']=time()+60;
+			//任务超时时间60秒，100秒后若没有响应则重新添加任务到队列中
+			$task['acktime']=time()+100;
 			self::$onProcess->insert($task);
 		}
 		return $task;
@@ -158,18 +222,5 @@ class TaskManager{
 		unset($urlinfo['level']);
 
 		self::$transport->insert($urlinfo);
-	}
-
-	//将mongo中的数据转储到es中
-	static function callTransport(){
-		$urlinfo=self::$transport->findOne();
-		if($urlinfo!=null){
-			self::$transport->remove($urlinfo);
-			unset($urlinfo['_id']);
-			return $urlinfo;
-		}
-		else{
-			return null;
-		}
 	}
 }

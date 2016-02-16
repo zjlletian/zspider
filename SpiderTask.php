@@ -4,9 +4,9 @@ include_once('UrlAnalyzer.class.php');
 include_once('TaskManager.class.php');
 include_once('Util.class.php');
 
-//任务异常终止时通知管理员
+//任务终止时调用
 function shutdown_function(){
-
+	
 }
 register_shutdown_function('shutdown_function');
 

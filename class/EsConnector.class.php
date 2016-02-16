@@ -3,7 +3,7 @@ include_once(dirname(dirname(__FILE__)).'/Config.php');
 include_once('elasticsearch/vendor/autoload.php');
 include_once('Util.class.php');
 
-class ElasticSearch {
+class ESConnector {
 	
 	static private $esclient=null;
 
@@ -11,7 +11,6 @@ class ElasticSearch {
 	static function connect(){
 		if(self::$esclient==null){
 			self::$esclient = Elasticsearch\ClientBuilder::create()->setHosts($GLOBALS['ELASTICSEARCH'])->build();
-			Util::echoYellow("Connect to ElasticSearch... [ok]\n");
 		}
 		return true;
 	}
