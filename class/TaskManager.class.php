@@ -1,6 +1,7 @@
 <?php
 include_once(dirname(dirname(__FILE__)).'/Config.php');
 include_once('Util.class.php');
+include_once('Transporter.class.php');
 
 class TaskManager{
 
@@ -13,29 +14,34 @@ class TaskManager{
 	//不更新的url列表
 	private static $notUpdate;
 
-	//正在处理的队列
+	//正在处理的任务
 	private static $onProcess;
+
+	//正在转储的队列
+	private static $transport;
 
 	//初始化连接
 	static function init(){
 		if(self::$mongo==null) {
 			//连接mongodb
-			echo "Connect to TaskQueue on MongoDB... ";
 			self::$mongo = new Mongo($GLOBALS['MONGODB']);
 			self::$taskQueue = self::$mongo->zspider->taskqueue;
 			self::$notUpdate = self::$mongo->zspider->notupdate;
 			self::$onProcess = self::$mongo->zspider->onprocess;
-			Util::echoGreen("[ok]\n");
+			self::$transport = self::$mongo->zspider->transport;
+			Util::echoYellow("Connect to TaskQueue on MongoDB... [ok]\n");
+
+			//启动转储进程
+			Transporter::start();
 
 			//创建子进程，用于检测ack的超时，将超时的task重新加入队列中
-			echo "Fork ackMonitor progress...";
 			$pid = pcntl_fork();
 			if ($pid == -1) {
-				Util::echoRed("[failed]\n");
+				Util::echoRed("Fork ackMonitor progress... [failed]\n");
 				exit();
 			}
 			elseif(!$pid) {
-				Util::echoGreen("[ok]\n");
+				Util::echoYellow("Fork ackMonitor progress... [ok]\n");
 			    while(true) {
 					$task=self::$onProcess->findOne(array('acktime'=>array('$lte'=>time())));
 					if($task!=null){
@@ -67,8 +73,8 @@ class TaskManager{
 			self::$taskQueue->insert(array('url'=>$url,'level'=>$level,'time'=>time(),'type'=>'new'));
 			return true;
 		}
-		//若存在新任务且level大于队列中的level，则更新队列中的level
-		if($task['type']='new' && $task['level']<$level) { 
+		//若存在level大于队列中的level，则更新队列中的level
+		if($task['level']<$level) { 
 			self::$taskQueue->update($task,array('$set'=>array("level"=>$level)));
 			return true;
 		}
@@ -80,8 +86,8 @@ class TaskManager{
 		//排除不更新的连接
 		foreach ($GLOBALS['NOTUPDATE_HAS'] as $notupdate) {
 			if(strpos($url,$notupdate) !== false ){
-				self::$notUpdate->remove(array('url'=>$url));
-				self::$notUpdate->insert(array('url'=>$url));
+				if(self::$notUpdate->findOne(array('url'=>$url))==null)
+					self::$notUpdate->insert(array('url'=>$url));
 				return 'will not update';
 			}
 		}
@@ -121,26 +127,49 @@ class TaskManager{
 		self::$onProcess->remove($task);
 		return true;
 	}
-
-	//判断地址是否需要处理
-	static function isHandled($url) {
+	
+	//判断地址是否需要处理，返回处理等级，-1不需要
+	static function isHandled($url,$level) {
 		//如果存在于不更新列表或者正在处理的列表中，标记为已处理
 		if(self::$notUpdate->findOne(array('url'=>$url))!=null||self::$onProcess->findOne(array('url'=>$url))!=null){
-			return true;
+			return -1;
 		}
 		$task=self::$taskQueue->findOne(array('url'=>$url));
 		//如果不存在任务，标记为未处理
 		if($task==null){
-			return false;
+			return $level;
 		}
-		//如果存在new类型任务或者（删除new任务，相当于提前处理）
-		if($task!=null && $task['type']=='new'){
+		//如果存在new任务或者level较小的update任务，则删除任务，返回较大的level（相当于提前处理）
+		if($task!=null && ($task['type']=='new' || $task['level']<$level)){
 			Util::echoYellow("find a new-type task with same url, process ahead.\n");
 			self::$taskQueue->remove($task);
-			return false;
+			return $task['level']>$level?$task['level']:$level;
 		}
 		else{
-			return true;
+			return -1;
+		}
+	}
+
+	//将urlInfo保存到mongo中
+	static function saveUrlInfo($urlinfo){
+		$urlinfo['time'] = date("Y-m-d H:i:s");
+		unset($urlinfo['code']);
+		unset($urlinfo['links']);
+		unset($urlinfo['level']);
+
+		self::$transport->insert($urlinfo);
+	}
+
+	//将mongo中的数据转储到es中
+	static function callTransport(){
+		$urlinfo=self::$transport->findOne();
+		if($urlinfo!=null){
+			self::$transport->remove($urlinfo);
+			unset($urlinfo['_id']);
+			return $urlinfo;
+		}
+		else{
+			return null;
 		}
 	}
 }

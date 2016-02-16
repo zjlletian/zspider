@@ -7,9 +7,9 @@ include_once('SimpleHtmlDom.php');
 class UrlAnalyzer{
 
 	//获取url的信息,尝试次数：3
-	static function getInfo($url){
+	static function getInfo($url,$level){
 		for($count=1; $count<=3; $count++){
-			$response=self::getResponse($url);
+			$response=self::getResponse($url,$level);
 			if($response['html']!=null || $response['code']==600){
 				break;
 			}
@@ -18,7 +18,7 @@ class UrlAnalyzer{
 	}
 
 	//获取url的信息：url重定向后的地址，code状态码，html网页内容，charset原始字符编码
-	private static function getResponse($url,$referer=null){
+	private static function getResponse($url,$level,$referer=null){
 
 		$ch = curl_init();
 		//curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
@@ -67,10 +67,15 @@ class UrlAnalyzer{
 					}
 					$url=$redirect_url;
 
-					//判断重定向的地址是否已经处理
-					if(TaskManager::isHandled($redirect_url)){
+					//判断地址是否需要处理
+					$level2=TaskManager::isHandled($redirect_url,$level);
+					if($level2==-1){
 						$response['code'] = 600;
 						throw new Exception("Get urlinfo cancle, redirect url has been or is being handled.\n");
+					}
+					if($level2!=$level){
+						Util::echoYellow("level ".$level."up to ".$level2."\n");
+						$level=$level2;
 					}
 					//检查重定向地址是否有效
 					if(!self::checkHref($redirect_url)){
@@ -121,6 +126,12 @@ class UrlAnalyzer{
 					$htmltext = mb_convert_encoding($htmltext, 'UTF-8', $charset);
 				}
 
+				//网页文件大小检测，避免内存溢出以及存入es过慢
+				if(strlen($htmltext)>$GLOBALS['MAX_HTMLSISE']){
+					$response['code'] = 600;
+		    		throw new Exception("Get urlinfo cancle, html is too long. (doc size=".strlen($htmltext).", max size=".$GLOBALS['MAX_HTMLSISE'].")\n");
+				}
+
 				//网页标题
 				$htmldom = new simple_html_dom();
 				$htmldom->load($htmltext);
@@ -161,6 +172,7 @@ class UrlAnalyzer{
 		curl_close($ch);
 		unset($ch);
 		unset($htmltext);
+		$response['level']=$level;
 	    return $response;
 	}
 

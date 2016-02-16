@@ -9,10 +9,9 @@ class ElasticSearch {
 
 	//建立连接
 	static function connect(){
-		echo "Connect to ElasticSearch... ";
 		if(self::$esclient==null){
 			self::$esclient = Elasticsearch\ClientBuilder::create()->setHosts($GLOBALS['ELASTICSEARCH'])->build();
-			Util::echoGreen("[ok]\n");
+			Util::echoYellow("Connect to ElasticSearch... [ok]\n");
 		}
 		return true;
 	}
