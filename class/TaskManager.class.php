@@ -23,36 +23,51 @@ class TaskManager {
 	//正在转储的队列
 	private static $transport;
 
-	//主进程pid, 转储进程pid, ack监视进程pid
-	private static $mainPid;
-	private static $esPid;
-	private static $ackPid;
+	//任务日志
+	private static $taskLog;
 
-	//初始化
+	//启动任务队列
 	static function init(){
+		Util::echoYellow("Zspider Init...\n");
+		
+		//连接到mongodb
+		echo "Connect to TaskQueue on MongoDB... ";
+		if(self::connect()){
+			Util::echoGreen("[ok]\n");
+		}
+		else{
+			Util::echoRed("[failed]\n");
+			exit();
+		}
+
+		//创建mongodb索引
+		self::$notUpdate->ensureIndex(array('url' => 1), array('unique' => true)); //url升序，唯一
+		self::$taskQueue->ensureIndex(array('url' => 1), array('unique' => true)); //url升序，唯一
+		self::$taskQueue->ensureIndex(array('time' => 1)); //time升序
+		self::$taskLog->ensureIndex(array('time' => -1)); //time降序
+		self::$taskLog->ensureIndex(array('type' => -1)); //type降序
+
+		//启动ES转储子进程
+		self::startEsTransport();
+
+		//启动ack监视子进程
+		self::srartAckWatcher();
+
+		//添加默认起点任务
+		foreach ($GLOBALS['DEFAULT_SITE'] as $level => $urls) {
+			self::addNewTasks($urls,intval($level));
+		}
+	}
+
+	//连接到mongodb
+	static function connect(){
 		if(self::$mongo==null) {
-			Util::echoYellow("Zspider Init...\n");
-			//连接mongodb
-			echo "Connect to TaskQueue on MongoDB... ";
 			self::$mongo = new Mongo($GLOBALS['MONGODB']);
 			self::$taskQueue = self::$mongo->zspider->taskqueue;
 			self::$notUpdate = self::$mongo->zspider->notupdate;
 			self::$onProcess = self::$mongo->zspider->onprocess;
 			self::$transport = self::$mongo->zspider->transport;
-			Util::echoGreen("[ok]\n");
-
-			//启动转储进程与ack监视进程
-			self::$esPid=self::startEsTransport();
-			self::$ackPid=self::srartAckWatcher();
-
-			//获取主进程pid
-			self::$mainPid=posix_getpid();
-			Util::echoYellow("ZSpider start, mainPid:".self::$mainPid.", esPid:".self::$esPid.", ackPid:".self::$ackPid."\n");
-
-			//添加默认起点任务
-			foreach ($GLOBALS['DEFAULT_SITE'] as $level => $urls) {
-				self::addNewTasks($urls,intval($level));
-			}
+			self::$taskLog = self::$mongo->zspider->tasklog;
 		}
 		return true;
 	}
@@ -79,7 +94,7 @@ class TaskManager {
 		    while(true) {
 		    	$urlinfo=self::$transport->findOne();
 				if($urlinfo!=null){
-					self::$transport->remove($urlinfo);
+					self::$transport->remove(array('_id'=>$urlinfo['_id']));
 					unset($urlinfo['_id']);
 					$upsert = $urlinfo;
 					$upsert['view'] = 0;
@@ -110,7 +125,7 @@ class TaskManager {
 		    while(true) {
 				$task=self::$onProcess->findOne(array('acktime'=>array('$lte'=>time())));
 				if($task!=null){
-					self::$onProcess->remove($task);
+					self::$onProcess->remove(array('_id'=>$task['_id']));
 					if(self::$taskQueue->findOne(array('url'=>$task['url']))==null){
 						unset($task['acktime']);
 						self::$taskQueue->insert($task);
@@ -143,7 +158,7 @@ class TaskManager {
 		//如果存在new任务或者level较小的update任务，则删除任务，返回较大的level（相当于提前处理）
 		if($task!=null && ($task['type']=='new' || $task['level']<$level)){
 			Util::echoYellow("find a new-type task with same url, process ahead.\n");
-			self::$taskQueue->remove($task);
+			self::$taskQueue->remove(array('_id'=>$task['_id']));
 			return $task['level']>$level?$task['level']:$level;
 		}
 		else{
@@ -154,9 +169,9 @@ class TaskManager {
 	//获取任务
 	static function getTask(){
 		//由于时间升序排列造成先进先出，形成广度优先遍历，深度越深，队列数据量大量上升，这里要注意磁盘的空间是否足够。
-		$task=self::$taskQueue->findOne(array('time'=>array('$lte'=>time())));
+		$task=self::$taskQueue->findOne(array('time'=>array('$lte'=>time()))); //小余等于当前时间
 		if($task!=null){
-			self::$taskQueue->remove($task);
+			self::$taskQueue->remove(array('_id'=>$task['_id']));
 			//任务超时时间60秒，100秒后若没有响应则重新添加任务到队列中
 			$task['acktime']=time()+100;
 			self::$onProcess->insert($task);
@@ -165,18 +180,21 @@ class TaskManager {
 	}
 
 	//提交任务执行结果，返回更新时间字符串
-	static function submitTask($taskid,$urlinfo){
-		$response=array();
+	static function submitTask($task,$urlinfo){
+		$response = array();
+		$statu = 0;
+		$url=$task['url'];
+
 		if($urlinfo!=null){
+			$statu = 1;
+			$url=$urlinfo['url'];
 			//对执行结果分配更新任务
 			$response['updatetime']=self::addUpdateTask($urlinfo['url'],$urlinfo['level']);
-
 			//当level>0时，尝试将连接加入爬虫任务队列
 			$response['newlinks']=0;
 			if($urlinfo['level']>0 && count($urlinfo['links'])>0){
 				$response['newlinks']=self::addNewTasks($urlinfo['links'],$urlinfo['level']-1);
 			}
-
 			//保存url信息到队列
 			$urlinfo['time'] = date("Y-m-d H:i:s");
 			unset($urlinfo['code']);
@@ -184,7 +202,10 @@ class TaskManager {
 			unset($urlinfo['level']);
 			self::$transport->insert($urlinfo);
 		}
-		self::$onProcess->remove(array('_id'=>$taskid));
+		//从正在执行的任务中移除
+		self::$onProcess->remove(array('_id'=>$task['_id']));
+		//记录任务日志
+		self::$taskLog->insert(array('url'=>$url,'time'=>time(),'type'=>$task['type'],'statu'=>$statu));
 		return $response;
 	}
 
@@ -236,5 +257,13 @@ class TaskManager {
 		}
 		self::$taskQueue->insert(array('url'=>$url,'level'=>$level,'time'=>$updatetime,'type'=>'update'));
 		return date("Y-m-d H:i:s",$updatetime);
+	}
+
+	//获取队列信息
+	static function getQueueInfo(){
+		$queueinfo=array();
+		$queueinfo['onprocess'] = iterator_to_array(self::$onProcess->find(array()));
+		$queueinfo['new_suc'] = self::$taskLog->count(array('type'=>'new','statu'=>1));
+		$queueinfo['new_fail'] = self::$taskLog->count(array('type'=>'new','statu'=>0));
 	}
 }

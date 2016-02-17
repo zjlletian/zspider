@@ -44,7 +44,7 @@ function handleSpiderTask($task){
 	$urlinfo=UrlAnalyzer::getInfo($task['url'],$task['level']);
 
 	//提交任务执行结果
-	$response=TaskManager::submitTask($task['_id'],$urlinfo);
+	$response=TaskManager::submitTask($task,$urlinfo);
 
 	//显示执行结果
 	if($urlinfo!=null){
