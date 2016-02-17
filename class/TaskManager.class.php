@@ -43,9 +43,11 @@ class TaskManager {
 		//创建mongodb索引
 		self::$notUpdate->ensureIndex(array('url' => 1), array('unique' => true)); //url升序，唯一
 		self::$taskQueue->ensureIndex(array('url' => 1), array('unique' => true)); //url升序，唯一
-		self::$taskQueue->ensureIndex(array('time' => 1)); //time升序
-		self::$taskLog->ensureIndex(array('time' => -1)); //time降序
-		self::$taskLog->ensureIndex(array('type' => -1)); //type降序
+		self::$taskQueue->ensureIndex(array('time' => 1)); //time升序 早->晚
+		self::$taskQueue->ensureIndex(array('type' => 1)); //type升序 new->update
+		self::$taskLog->ensureIndex(array('time' => -1)); //time降序 晚->早
+		self::$taskLog->ensureIndex(array('statu' => -1)); //statu降序 1->0
+		self::$taskLog->ensureIndex(array('type' => 1)); //type降序 new->update
 
 		//启动ES转储子进程
 		self::startEsTransport();
@@ -262,8 +264,16 @@ class TaskManager {
 	//获取队列信息
 	static function getQueueInfo(){
 		$queueinfo=array();
-		$queueinfo['onprocess'] = iterator_to_array(self::$onProcess->find(array()));
-		$queueinfo['new_suc'] = self::$taskLog->count(array('type'=>'new','statu'=>1));
-		$queueinfo['new_fail'] = self::$taskLog->count(array('type'=>'new','statu'=>0));
+		//正在处理的任务信息
+		$queueinfo['onprocess'] = iterator_to_array(self::$onProcess->find());
+		//等待爬取的网页总量
+		$queueinfo['new_task'] = self::$taskQueue->count(array('type'=>'new'));
+		//需要更新的网页总量
+		$queueinfo['update_task'] = self::$taskQueue->count(array('type'=>'update','time'=>array('$lte'=>time())));
+		//爬取过的网页总量
+		$queueinfo['new_log'] = self::$taskLog->count(array('type'=>'new'));
+		//等待转储的文档数量
+		$queueinfo['ontransport'] = self::$transport->count();
+		return $queueinfo;
 	}
 }

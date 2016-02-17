@@ -245,8 +245,8 @@ class UrlAnalyzer{
 
 		//去除href后面的#
 		$hrefsharppos=strpos($href,"#");
-		if($href!==false){
-			$hrefsharppos=substr($href,0,$hrefsharppos);
+		if($hrefsharppos!==false){
+			$href=substr($href,0,$hrefsharppos);
 		}
 
 		//以协议开头的,直接使用

@@ -41,7 +41,8 @@ $GLOBALS['NOTTRACE_HAS'] = array(
 	'error',
 	'login',
 	'logout',
-	'passport'
+	'passport',
+	'/search'
 );
 
 //默认更新周期
@@ -55,7 +56,6 @@ $GLOBALS['SITE_UPDATE'] = array(
 //不进行更新的url (包涵以下字段)
 $GLOBALS['NOTUPDATE_HAS'] = array(
 	'ifeng.com/a/',
-	'ifeng.com/news/',
 	'ifeng.com/news/',
 	'ifeng.com/mil/'
 );
