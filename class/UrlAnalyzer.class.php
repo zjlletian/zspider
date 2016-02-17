@@ -6,18 +6,18 @@ include_once('SimpleHtmlDom.php');
 
 class UrlAnalyzer{
 
-	//获取url的信息,尝试次数：3
+	//对url尝试3次获取信息
 	static function getInfo($url,$level){
 		for($count=1; $count<=3; $count++){
 			$response=self::getResponse($url,$level);
-			if($response['html']!=null || $response['code']==600){
+			if(!isset($response['error']) || $response['code']==600){
 				break;
 			}
 		}
-		return $response;
+		return isset($response['error'])? null:$response ;
 	}
 
-	//获取url的信息：url重定向后的地址，code状态码，html网页内容，charset原始字符编码
+	//获取url的信息：url重定向后的地址，code状态码，html网页快照内容，text纯文本内容，charset原始字符编码
 	private static function getResponse($url,$level,$referer=null){
 
 		$ch = curl_init();
@@ -38,7 +38,7 @@ class UrlAnalyzer{
 		$header[] = "Connection: keep-alive"; 
 		$header[] = "Keep-Alive: 300";
 		$header[] = "Accept-Charset: utf-8,ISO-8859-1;q=0.7,*;q=0.7"; 
-		$header[] = "User-Agent:Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.13 Safari/537.36";
+		$header[] = "User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.109 Safari/537.36";
 	    if($referer){
 	    	$header[] = 'Referer: '.$referer;
 	    }
@@ -125,6 +125,7 @@ class UrlAnalyzer{
 				elseif ($charset != "UTF-8"){
 					$htmltext = mb_convert_encoding($htmltext, 'UTF-8', $charset);
 				}
+				$response['charset']= $charset;
 
 				//网页文件大小检测，避免内存溢出以及存入es过慢
 				if(strlen($htmltext)>$GLOBALS['MAX_HTMLSISE']){
@@ -132,28 +133,40 @@ class UrlAnalyzer{
 		    		throw new Exception("Get urlinfo cancle, html is too long. (doc size=".strlen($htmltext).", max size=".$GLOBALS['MAX_HTMLSISE'].")\n");
 				}
 
-				//网页标题
-				$htmldom = new simple_html_dom();
+				//开始html解析
+				$htmldom= new simple_html_dom();
 				$htmldom->load($htmltext);
 
+				//获取标题
 				$response['title']=trim($htmldom->find('title',0)->innertext);
 				if(empty($response['title'])){
 					$response['code'] = 600;
 					throw new Exception("Get urlinfo cancle, site has no title.\n");
 				}
-				$response['charset']= $charset;
-				$response['html'] = $htmltext;
-				
+
+				//获取html纯文本内容
+				$body=$htmldom->find('body',0)->innertext;
+				if(empty($body)){
+					$response['code'] = 600;
+					throw new Exception("Get urlinfo cancle, site has no body.\n");
+				}
+				$text=self::htmlFilter($body);
+				$response['text']=empty($text)?$response['title']:$text;
+				unset($body);
+				unset($text);
+
+				//网页快照
+				$response['html']=$htmltext;
+
 				//解析网页中的超链接
-				$links=array();
+				$response['links']=array();
 				foreach ($htmldom->find('a') as $a) {
 			    	$href=self::transformHref(trim($a->href),$response['url']);
 			    	if($href!=false){
-			    		if(!in_array($href,$links))
-			    			$links[]=$href;
+			    		if(!in_array($href,$response['links']))
+			    			$response['links'][]=$href;
 			    	}
 			    }
-			    $response['links']=$links;
 				$htmldom->clear();
 				unset($htmldom);
 				Util::echoGreen("Get urlinfo succeed. \n");
@@ -167,13 +180,40 @@ class UrlAnalyzer{
 				Util::echoRed("Get urlinfo failed, Code=".$response['code']."\n");
 			else
 				Util::echoYellow($e->getMessage());
-		    $response['html'] = null;
+			$response['error']=true;
 		}
 		curl_close($ch);
 		unset($ch);
 		unset($htmltext);
 		$response['level']=$level;
 	    return $response;
+	}
+
+	//过滤html内容
+	static function htmlFilter($htmltext){
+		$search = array (
+			"'<script[^>]*?>.*?</script>'si",
+			"'<style[^>]*?>.*?</style>'si", 
+			"'<a[^>]*?>.*?</a>'si",
+			"'<img[^>]*?>.*?</img>'si",
+			"'<input[^>]*?>.*?</input>'si",
+			"'<!--[/!]*?[^<>]*?>'si",
+			"'([rn])[s]+'",
+			"'&(quot|#34);'i",
+			"'&(amp|#38);'i", 
+			"'&(lt|#60);'i", 
+			"'&(gt|#62);'i", 
+			"'&(nbsp|#160);'i", 
+			"'&(iexcl|#161);'i", 
+			"'&(cent|#162);'i", 
+			"'&(pound|#163);'i", 
+			"'&(copy|#169);'i", 
+			"'&#(d+);'e"
+		);
+		//去除标签以及innertext
+		$htmltext = preg_replace($search,"   ", $htmltext);
+		//去除'<></>'标签
+		return strip_tags($htmltext);
 	}
 
 	//检查href是否可用
@@ -201,6 +241,12 @@ class UrlAnalyzer{
 		//检查href
 		if(!self::checkHref($href)){
 			return false;
+		}
+
+		//去除href后面的#
+		$hrefsharppos=strpos($href,"#");
+		if($href!==false){
+			$hrefsharppos=substr($href,0,$hrefsharppos);
 		}
 
 		//以协议开头的,直接使用

@@ -1,4 +1,4 @@
-ZSpider分布式网站爬虫  开发日志 verison 1.2.0
+ZSpider分布式网站爬虫  开发日志 verison 1.3.0
 
 --------------------- 运行前提 ---------------------
 
@@ -12,8 +12,6 @@ ZSpider分布式网站爬虫  开发日志 verison 1.2.0
 完成后台管理web界面。
 
 完成关键词搜索web api。
-
-优化存入es的htmltext文本内容。
 
 将队列独立出来形成服务。
 
@@ -29,6 +27,15 @@ ZSpider分布式网站爬虫  开发日志 verison 1.2.0
 完善特殊网站的规则。
 
 将simple_html_dom替换成效率更高的解析器。
+
+
+--------------------- 2016-2-16 version 1.3.0 ---------------------
+
+1.将原来TaskManager中的addNewTask,saveUrlInfo,addUpdateTask,ackTask合并成为submitTask，减少Spider调用与TaskManager的次数。
+
+2.使用config来配置默认起始站点。
+
+3.获取html时，过滤html中无用的标签信息。
 
 
 --------------------- 2016-2-16 version 1.2.0 ---------------------

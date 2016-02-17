@@ -48,6 +48,11 @@ class TaskManager {
 			//获取主进程pid
 			self::$mainPid=posix_getpid();
 			Util::echoYellow("ZSpider start, mainPid:".self::$mainPid.", esPid:".self::$esPid.", ackPid:".self::$ackPid."\n");
+
+			//添加默认起点任务
+			foreach ($GLOBALS['DEFAULT_SITE'] as $level => $urls) {
+				self::addNewTasks($urls,intval($level));
+			}
 		}
 		return true;
 	}
@@ -124,75 +129,7 @@ class TaskManager {
 		return $pid;
 	}
 
-	//增加实时任务
-	static function addNewTask($url,$level){
-		//如果存在于不更新列表中则直接返回
-		if(self::$notUpdate->findOne(array('url'=>$url))!=null){
-			return false;
-		}
-
-		//若不存在队列中或者手动强制添加，则加入新任务。
-		$task=self::$taskQueue->findOne(array('url'=>$url));
-		if($task==null) {
-			self::$taskQueue->insert(array('url'=>$url,'level'=>$level,'time'=>time(),'type'=>'new'));
-			return true;
-		}
-		//若存在level大于队列中的level，则更新队列中的level
-		if($task['level']<$level) { 
-			self::$taskQueue->update($task,array('$set'=>array("level"=>$level)));
-			return true;
-		}
-		return false;
-	}
-
-	//增加更新任务
-	static function addUpdateTask($url,$level){
-		//排除不更新的连接
-		foreach ($GLOBALS['NOTUPDATE_HAS'] as $notupdate) {
-			if(strpos($url,$notupdate) !== false ){
-				if(self::$notUpdate->findOne(array('url'=>$url))==null)
-					self::$notUpdate->insert(array('url'=>$url));
-				return 'will not update';
-			}
-		}
-		//删除原有更新预约
-		self::$taskQueue->remove(array("url" => $url));
-
-		//分配默认更新时间
-		if(isset($GLOBALS['SITE_UPDATE'][$url])){
-			if(isset($GLOBALS['SITE_UPDATE'][$url]['time']))
-				$updatetime=time()+$GLOBALS['SITE_UPDATE'][$url]['time'];
-			if(isset($GLOBALS['SITE_UPDATE'][$url]['level']))
-				$level=$GLOBALS['SITE_UPDATE'][$url]['level'];
-		}
-		else{
-			$updatetime=time()+$GLOBALS['UPDATE_TIME'];
-		}
-		self::$taskQueue->insert(array('url'=>$url,'level'=>$level,'time'=>$updatetime,'type'=>'update'));
-		return date("Y-m-d H:i:s",$updatetime);
-	}
-
-	//获取任务
-	static function getTask(){
-
-		//由于时间升序排列造成先进先出，形成广度优先遍历，深度越深，队列数据量大量上升，这里要注意磁盘的空间是否足够。
-		$task=self::$taskQueue->findOne(array('time'=>array('$lte'=>time())));
-		if($task!=null){
-			self::$taskQueue->remove($task);
-			//任务超时时间60秒，100秒后若没有响应则重新添加任务到队列中
-			$task['acktime']=time()+100;
-			self::$onProcess->insert($task);
-		}
-		return $task;
-	}
-
-	//任务ack
-	static function ackTask($task){
-		self::$onProcess->remove($task);
-		return true;
-	}
-	
-	//判断地址是否需要处理，返回处理等级，-1不需要
+	//判断地址是否需要处理,返回处理等级，-1不需要 (用于redirect后的地址判断)
 	static function isHandled($url,$level) {
 		//如果存在于不更新列表或者正在处理的列表中，标记为已处理
 		if(self::$notUpdate->findOne(array('url'=>$url))!=null||self::$onProcess->findOne(array('url'=>$url))!=null){
@@ -214,13 +151,90 @@ class TaskManager {
 		}
 	}
 
-	//将urlInfo保存到mongo中
-	static function saveUrlInfo($urlinfo){
-		$urlinfo['time'] = date("Y-m-d H:i:s");
-		unset($urlinfo['code']);
-		unset($urlinfo['links']);
-		unset($urlinfo['level']);
+	//获取任务
+	static function getTask(){
+		//由于时间升序排列造成先进先出，形成广度优先遍历，深度越深，队列数据量大量上升，这里要注意磁盘的空间是否足够。
+		$task=self::$taskQueue->findOne(array('time'=>array('$lte'=>time())));
+		if($task!=null){
+			self::$taskQueue->remove($task);
+			//任务超时时间60秒，100秒后若没有响应则重新添加任务到队列中
+			$task['acktime']=time()+100;
+			self::$onProcess->insert($task);
+		}
+		return $task;
+	}
 
-		self::$transport->insert($urlinfo);
+	//提交任务执行结果，返回更新时间字符串
+	static function submitTask($taskid,$urlinfo){
+		$response=array();
+		if($urlinfo!=null){
+			//对执行结果分配更新任务
+			$response['updatetime']=self::addUpdateTask($urlinfo['url'],$urlinfo['level']);
+
+			//当level>0时，尝试将连接加入爬虫任务队列
+			$response['newlinks']=0;
+			if($urlinfo['level']>0 && count($urlinfo['links'])>0){
+				$response['newlinks']=self::addNewTasks($urlinfo['links'],$urlinfo['level']-1);
+			}
+
+			//保存url信息到队列
+			$urlinfo['time'] = date("Y-m-d H:i:s");
+			unset($urlinfo['code']);
+			unset($urlinfo['links']);
+			unset($urlinfo['level']);
+			self::$transport->insert($urlinfo);
+		}
+		self::$onProcess->remove(array('_id'=>$taskid));
+		return $response;
+	}
+
+	//批量增加实时任务
+	private static function addNewTasks($urls,$level){
+		$count=0;
+		foreach ($urls as $url) {
+			//如果存在于不更新列表中则直接忽略
+			if(self::$notUpdate->findOne(array('url'=>$url))!=null){
+				continue;
+			}
+			//若不存在队列中或者手动强制添加，则加入新任务。若存在level大于队列中的level，则更新队列中的level
+			$task=self::$taskQueue->findOne(array('url'=>$url));
+			if($task==null) {
+				self::$taskQueue->insert(array('url'=>$url,'level'=>$level,'time'=>time(),'type'=>'new'));
+				$count++;
+			}
+			else if($task['level']<$level) { 
+				self::$taskQueue->update($task,array('$set'=>array("level"=>$level)));
+				$count++;
+			}
+		}
+		return $count;
+	}
+
+	//对执行结果分配更新任务
+	private static function addUpdateTask($url,$level){
+		//排除不更新的连接
+		foreach ($GLOBALS['NOTUPDATE_HAS'] as $notupdate) {
+			if(strpos($url,$notupdate) !== false ){
+				//添加到不更新列表中
+				if(self::$notUpdate->findOne(array('url'=>$url))==null)
+					self::$notUpdate->insert(array('url'=>$url));
+				return 'will not update';
+			}
+		}
+		//删除原有更新预约
+		self::$taskQueue->remove(array("url" => $url));
+
+		//分配更新时间
+		if(isset($GLOBALS['SITE_UPDATE'][$url])){
+			if(isset($GLOBALS['SITE_UPDATE'][$url]['time']))
+				$updatetime=time()+$GLOBALS['SITE_UPDATE'][$url]['time'];
+			if(isset($GLOBALS['SITE_UPDATE'][$url]['level']))
+				$level=$GLOBALS['SITE_UPDATE'][$url]['level'];
+		}
+		else{
+			$updatetime=time()+$GLOBALS['UPDATE_TIME'];
+		}
+		self::$taskQueue->insert(array('url'=>$url,'level'=>$level,'time'=>$updatetime,'type'=>'update'));
+		return date("Y-m-d H:i:s",$updatetime);
 	}
 }
