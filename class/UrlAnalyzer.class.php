@@ -14,7 +14,7 @@ class UrlAnalyzer{
 				break;
 			}
 		}
-		return isset($response['error'])? null:$response ;
+		return $response ;
 	}
 
 	//获取url的信息：url重定向后的地址，code状态码，html网页快照内容，text纯文本内容，charset原始字符编码
@@ -59,11 +59,11 @@ class UrlAnalyzer{
 				if(intval($response['code']/100)==3 || $response['url']!=$url){
 					if(empty($responseheader['redirect_url'])){
 						$redirect_url=$response['url'];
-						Util::echoYellow("Redirect[301]: ".$redirect_url."\n");
+						//Util::echoYellow("Redirect[301]: ".$redirect_url."\n");
 					}
 					else{
 						$redirect_url=$responseheader['redirect_url'];
-						Util::echoYellow("Redirect[302]: ".$redirect_url."\n");
+						//Util::echoYellow("Redirect[302]: ".$redirect_url."\n");
 					}
 					$url=$redirect_url;
 
@@ -71,7 +71,7 @@ class UrlAnalyzer{
 					$level2=TaskManager::isHandled($redirect_url,$level);
 					if($level2==-1){
 						$response['code'] = 600;
-						throw new Exception("Get urlinfo cancle, redirect url has been or is being handled.\n");
+						throw new Exception("redirect url has been or is being handled.\n");
 					}
 					if($level2!=$level){
 						Util::echoYellow("level ".$level."up to ".$level2."\n");
@@ -80,7 +80,7 @@ class UrlAnalyzer{
 					//检查重定向地址是否有效
 					if(!self::checkHref($redirect_url)){
 						$response['code'] = 600;
-						throw new Exception("Get urlinfo cancle, redirect url was marked to not trace.\n");
+						throw new Exception("redirect url was marked to not trace.\n");
 					}
 					curl_setopt($ch, CURLOPT_URL, $redirect_url);
 				}
@@ -92,7 +92,7 @@ class UrlAnalyzer{
 			//判断是否重定向超过次数限制
 			if(intval($response['code']/100)==3 || $response['url']!=$url){
 				$response['code']=600;
-				throw new Exception("Get urlinfo cancle, too mach redirect.\n");
+				throw new Exception("too mach redirect.\n");
 			}
 
 			//判断是否访问成功
@@ -102,7 +102,7 @@ class UrlAnalyzer{
 				$contentType = strtr(strtoupper($responseheader['content_type']), array(' '=>'','\t'=>'','@'=>''));
 				if(strpos($contentType,'TEXT/HTML')===false){
 					$response['code'] = 600;
-					throw new Exception("Get urlinfo cancle, doctype is not html.\n");
+					throw new Exception("doctype is not html.\n");
 				}
 
 				//使用content_type获取字符编码，若未检出，则使用编码检测函数检测方式获取
@@ -120,7 +120,7 @@ class UrlAnalyzer{
 				//如果未检测出字符编码则返回错误，否则字符集转换为UTF-8
 				if($charset ==''){
 					$response['code'] = 600;
-		    		throw new Exception("Get urlinfo cancle, unknown charset.\n");
+		    		throw new Exception("unknown charset.\n");
 				}
 				elseif ($charset != "UTF-8"){
 					$htmltext = mb_convert_encoding($htmltext, 'UTF-8', $charset);
@@ -130,7 +130,7 @@ class UrlAnalyzer{
 				//网页文件大小检测，避免内存溢出以及存入es过慢
 				if(strlen($htmltext)>$GLOBALS['MAX_HTMLSISE']){
 					$response['code'] = 600;
-		    		throw new Exception("Get urlinfo cancle, html is too long. (doc size=".strlen($htmltext).", max size=".$GLOBALS['MAX_HTMLSISE'].")\n");
+		    		throw new Exception("html is too long. (doc size=".strlen($htmltext).", max size=".$GLOBALS['MAX_HTMLSISE'].")\n");
 				}
 
 				//开始html解析
@@ -141,14 +141,14 @@ class UrlAnalyzer{
 				$response['title']=trim($htmldom->find('title',0)->innertext);
 				if(empty($response['title'])){
 					$response['code'] = 600;
-					throw new Exception("Get urlinfo cancle, site has no title.\n");
+					throw new Exception("site has no title.\n");
 				}
 
 				//获取html纯文本内容
 				$body=$htmldom->find('body',0)->innertext;
 				if(empty($body)){
 					$response['code'] = 600;
-					throw new Exception("Get urlinfo cancle, site has no body.\n");
+					throw new Exception("site has no body.\n");
 				}
 				$text=self::htmlFilter($body);
 				$response['text']=empty($text)?$response['title']:$text;
@@ -169,18 +169,21 @@ class UrlAnalyzer{
 			    }
 				$htmldom->clear();
 				unset($htmldom);
-				Util::echoGreen("Get urlinfo succeed. \n");
 			}
 			else{
 				throw new Exception();
 			}
 		}
 		catch(Exception $e) {
-			if($response['code']!=600)
-				Util::echoRed("Get urlinfo failed, Code=".$response['code']."\n");
-			else
-				Util::echoYellow($e->getMessage());
-			$response['error']=true;
+			if($response['code']!=600){
+				if(!isset($response['code'])){
+					$response['code']=0;
+				}
+				$response['error']="error code=".$response['code'];
+			}
+			else{
+				$response['error']=$e->getMessage();
+			}
 		}
 		curl_close($ch);
 		unset($ch);
@@ -238,17 +241,16 @@ class UrlAnalyzer{
 	//修正url路径
 	private static function transformHref($href,$baseurl){
 
-		//检查href
-		if(!self::checkHref($href)){
-			return false;
-		}
-
 		//去除href后面的#
 		$hrefsharppos=strpos($href,"#");
 		if($hrefsharppos!==false){
 			$href=substr($href,0,$hrefsharppos);
 		}
 
+		//检查href
+		if(!self::checkHref($href)){
+			return false;
+		}
 		//以协议开头的,直接使用
 		if(Util::strStartWith($href,'http://')||Util::strStartWith($href,'https://')) { 
 			return $href;

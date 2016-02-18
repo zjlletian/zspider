@@ -23,6 +23,9 @@ $GLOBALS['MONGODB'] = 'localhost:27017';
 //最大网页大小 2M
 $GLOBALS['MAX_HTMLSISE']=1024*2048;
 
+//最大并行任务数量
+$GLOBALS['MAX_PARALLEL']=10;
+
 //不进行追踪的href (完全匹配以下字段)
 $GLOBALS['NOTTRACE_MATCH'] = array(
 	'/'
@@ -31,6 +34,7 @@ $GLOBALS['NOTTRACE_MATCH'] = array(
 //不进行追踪的href (以以下字段开头)
 $GLOBALS['NOTTRACE_BEGIN'] = array(
 	'#',
+	'./#',
 	'ftp:',
 	'file:',
 	'javascript:'
@@ -63,5 +67,5 @@ $GLOBALS['NOTUPDATE_HAS'] = array(
 //默认起点站点
 $GLOBALS['DEFAULT_SITE'] = array(
 	'2'=>array('https://www.baidu.com/','http://www.ifeng.com/'),
-	'1'=>array('https://www.hao123.com/')
+	'3'=>array('http://www.163.com/','http://www.sina.com.cn/','http://baike.baidu.com/')
 );

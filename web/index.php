@@ -12,14 +12,7 @@
 	<meta charset="utf-8">
 </head>
 <body>
-	<h2>ZSpider QueueInfo</h2>
-	正在处理中的任务：<br>
-	<?php
-		foreach ($queueinfo['onprocess'] as $task) {
-			echo "level:".$task['level']." ".$task['url']."<br>";
-		}
-	?>
-	<br>
+<h2>ZSpider QueueInfo</h2>
 	等待爬取的新网页数量：<?php echo $queueinfo['new_task'];?>
 	<br><br>
 	需要更新的网页数量：<?php echo $queueinfo['update_task'];?>
@@ -28,5 +21,17 @@
 	<br><br>
 	待转储列队文档数量：<?php echo $queueinfo['ontransport'];?>
 	<br><br>
+	正在处理中的任务：<?php echo count($queueinfo['onprocess']);?>
+	<br><br>
+	<?php
+		foreach ($queueinfo['onprocess'] as $task) {
+			$delay=time()-$task['time'];
+			$h=intval($delay/3600);
+			$m=intval(($delay-$h*3600)/60);
+			$s=intval(($delay-$h*3600)%60);
+			echo "[ Delay: ".$h.' hours '.$m.' minutes '.$s." seconds ] [ Type: ".$task['type'].", Level: ".$task['level']." ] ".$task['url']."<br>";
+		}
+	?>
+	<br>
 </body>
 </html>
