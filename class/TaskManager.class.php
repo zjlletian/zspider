@@ -1,10 +1,7 @@
 <?php
 include_once(dirname(dirname(__FILE__)).'/Config.php');
-include_once('EsConnector.class.php');
+include_once('UrlInfo.class.php');
 include_once('Util.class.php');
-
-define('ES_INDEX','zspider');
-define('ES_TYPE','websites');
 
 class TaskManager {
 
@@ -55,8 +52,10 @@ class TaskManager {
 
 		//启动ES转储子进程
 		self::$espid=self::startEsTransport();
+
 		//启动ack监视子进程
 		self::$ackpid=self::srartAckWatcher();
+
 		//添加默认起点任务
 		foreach ($GLOBALS['DEFAULT_SITE'] as $level => $urls) {
 			self::addNewTasks($urls,intval($level));
@@ -80,7 +79,7 @@ class TaskManager {
 	private static function startEsTransport(){
 		//链接到es
 		echo "Connect to ElasticSearch... ";
-		if(ESConnector::connect()){
+		if(UrlInfo::connectES()){
 			Util::echoGreen("[ok]\n");
 		}
 		else{
@@ -99,13 +98,8 @@ class TaskManager {
 		    while(true) {
 		    	$urlinfo=self::$transport->findOne();
 				if($urlinfo!=null){
+					UrlInfo::upsertToES($urlinfo);
 					self::$transport->remove(array('_id'=>$urlinfo['_id']));
-					unset($urlinfo['_id']);
-					$upsert = $urlinfo;
-					$upsert['view'] = 0;
-					EsConnector::updateDocByDoc(ES_INDEX,ES_TYPE,md5($urlinfo['url']),$urlinfo,$upsert);
-					unset($upsert);
-					unset($urlinfo);
 				}
 				else{
 					usleep(100000); //100毫秒

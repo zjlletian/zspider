@@ -29,7 +29,7 @@
 			$h=intval($delay/3600);
 			$m=intval(($delay-$h*3600)/60);
 			$s=intval(($delay-$h*3600)%60);
-			echo "[ Delay: ".$h.' hours '.$m.' minutes '.$s." seconds ] [ Type: ".$task['type'].", Level: ".$task['level']." ] ".$task['url']."<br>";
+			echo "[ Type:".$task['type']." Level:".$task['level']." Delay:".$h.' hours '.$m.' minutes '.$s." seconds ] <br>".$task['url']."<br><br>";
 		}
 	?>
 	<br>
