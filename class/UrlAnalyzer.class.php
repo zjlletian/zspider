@@ -68,19 +68,15 @@ class UrlAnalyzer{
 					$url=$redirect_url;
 
 					//判断地址是否需要处理
-					$level2=TaskManager::isHandled($redirect_url,$level);
-					if($level2==-1){
+					$level=TaskManager::isHandled($redirect_url,$level);
+					if($level==-1){
 						$response['code'] = 600;
-						throw new Exception("redirect url has been or is being handled.\n");
-					}
-					if($level2!=$level){
-						Util::echoYellow("level ".$level."up to ".$level2."\n");
-						$level=$level2;
+						throw new Exception("redirect url has been or is being handled.");
 					}
 					//检查重定向地址是否有效
 					if(!self::checkHref($redirect_url)){
 						$response['code'] = 600;
-						throw new Exception("redirect url was marked to not trace.\n");
+						throw new Exception("redirect url was marked to not trace.");
 					}
 					curl_setopt($ch, CURLOPT_URL, $redirect_url);
 				}
@@ -102,7 +98,7 @@ class UrlAnalyzer{
 				$contentType = strtr(strtoupper($responseheader['content_type']), array(' '=>'','\t'=>'','@'=>''));
 				if(strpos($contentType,'TEXT/HTML')===false){
 					$response['code'] = 600;
-					throw new Exception("doctype is not html.\n");
+					throw new Exception("doctype is not html.");
 				}
 
 				//使用content_type获取字符编码，若未检出，则使用编码检测函数检测方式获取
@@ -120,7 +116,7 @@ class UrlAnalyzer{
 				//如果未检测出字符编码则返回错误，否则字符集转换为UTF-8
 				if($charset ==''){
 					$response['code'] = 600;
-		    		throw new Exception("unknown charset.\n");
+		    		throw new Exception("unknown charset.");
 				}
 				elseif ($charset != "UTF-8"){
 					$htmltext = mb_convert_encoding($htmltext, 'UTF-8', $charset);
@@ -130,7 +126,7 @@ class UrlAnalyzer{
 				//网页文件大小检测，避免内存溢出以及存入es过慢
 				if(strlen($htmltext)>$GLOBALS['MAX_HTMLSISE']){
 					$response['code'] = 600;
-		    		throw new Exception("html is too long. (doc size=".strlen($htmltext).", max size=".$GLOBALS['MAX_HTMLSISE'].")\n");
+		    		throw new Exception("html is too long. (doc size=".strlen($htmltext).", max size=".$GLOBALS['MAX_HTMLSISE'].")");
 				}
 
 				//开始html解析
@@ -141,14 +137,14 @@ class UrlAnalyzer{
 				$response['title']=trim($htmldom->find('title',0)->innertext);
 				if(empty($response['title'])){
 					$response['code'] = 600;
-					throw new Exception("site has no title.\n");
+					throw new Exception("site has no title.");
 				}
 
 				//获取html纯文本内容
 				$body=$htmldom->find('body',0)->innertext;
 				if(empty($body)){
 					$response['code'] = 600;
-					throw new Exception("site has no body.\n");
+					throw new Exception("site has no body.");
 				}
 				$text=self::htmlFilter($body);
 				$response['text']=empty($text)?$response['title']:$text;
