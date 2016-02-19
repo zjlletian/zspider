@@ -1,7 +1,5 @@
 <?php
 include_once(dirname(dirname(__FILE__)).'/Config.php');
-include_once('UrlInfo.class.php');
-include_once('Util.class.php');
 
 class TaskManager {
 
@@ -17,29 +15,28 @@ class TaskManager {
 	//正在处理的任务
 	private static $onProcess;
 
-	//正在转储的队列
-	private static $transport;
-
 	//任务日志
 	private static $taskLog;
 
-	//子进程pid
-	private static $espid,$ackpid,$ischild;
+	//连接到mongodb
+	static function connect(){
+		if(self::$mongo==null) {
+			self::$mongo = new Mongo($GLOBALS['MONGODB']);
+			self::$taskQueue = self::$mongo->zspider->taskqueue;
+			self::$notUpdate = self::$mongo->zspider->notupdate;
+			self::$onProcess = self::$mongo->zspider->onprocess;
+			self::$taskLog = self::$mongo->zspider->tasklog;
+		}
+		return true;
+	}
 
 	//启动任务队列
-	static function init(){
-		Util::echoYellow("Zspider Start...\n");
-		self::$ischild=false;
-
+	static function initQueue(){
+		Util::echoYellow("Init Zspider TaskQueue...\n");
 		//连接到mongodb
-		echo "Connect to TaskQueue on MongoDB... ";
-		if(self::connect()){
-			Util::echoGreen("[ok]\n");
-		}
-		else{
-			Util::echoRed("[failed]\n");
-			exit();
-		}
+		echo "Connect to MongoDB... ";
+		self::connect();
+		Util::echoGreen("[ok]\n");
 
 		//创建mongodb索引
 		self::$notUpdate->ensureIndex(array('url' => 1), array('unique' => true)); //url升序，唯一
@@ -50,11 +47,8 @@ class TaskManager {
 		self::$taskLog->ensureIndex(array('statu' => -1)); //statu降序 1->0
 		self::$taskLog->ensureIndex(array('type' => 1)); //type降序 new->update
 
-		//启动ES转储子进程
-		self::$espid=self::startEsTransport();
-
 		//启动ack监视子进程
-		self::$ackpid=self::srartAckWatcher();
+		self::srartAckWatcher();
 
 		//添加默认起点任务
 		foreach ($GLOBALS['DEFAULT_SITE'] as $level => $urls) {
@@ -62,54 +56,18 @@ class TaskManager {
 		}
 	}
 
-	//连接到mongodb
-	static function connect(){
-		if(self::$mongo==null) {
-			self::$mongo = new Mongo($GLOBALS['MONGODB']);
-			self::$taskQueue = self::$mongo->zspider->taskqueue;
-			self::$notUpdate = self::$mongo->zspider->notupdate;
-			self::$onProcess = self::$mongo->zspider->onprocess;
-			self::$transport = self::$mongo->zspider->transport;
-			self::$taskLog = self::$mongo->zspider->tasklog;
-		}
-		return true;
-	}
-
-	//创建用于从mongo到es的异步同步数据的子进程
-	private static function startEsTransport(){
-		//链接到es
-		echo "Connect to ElasticSearch... ";
-		if(UrlInfo::connectES()){
-			Util::echoGreen("[ok]\n");
-		}
-		else{
-			Util::echoRed("[failed]\n");
-			exit();
-		}
-		//创建子进程
-		echo "Fork data transport progress... ";
-		$pid = pcntl_fork();
-		if ($pid == -1) {
-			Util::echoRed("[failed]\n");
-			exit();
-		}
-		else if(!$pid) {
-			self::$ischild=true;
-		    while(true) {
-		    	$urlinfo=self::$transport->findOne();
-				if($urlinfo!=null){
-					UrlInfo::upsertToES($urlinfo);
-					self::$transport->remove(array('_id'=>$urlinfo['_id']));
-				}
-				else{
-					usleep(100000); //100毫秒
-				}
-			}
-		}
-		else{
-			Util::echoGreen("[ok]\n");
-		}
-		return $pid;
+	//获取队列信息
+	static function getQueueInfo(){
+		$queueinfo=array();
+		//正在处理的任务信息
+		$queueinfo['onprocess'] = iterator_to_array(self::$onProcess->find());
+		//等待爬取的网页总量
+		$queueinfo['new_task'] = self::$taskQueue->count(array('type'=>'new'));
+		//需要更新的网页总量
+		$queueinfo['update_task'] = self::$taskQueue->count(array('type'=>'update','time'=>array('$lte'=>time())));
+		//爬取过的网页总量
+		$queueinfo['new_log'] = self::$taskLog->count(array('type'=>'new'));
+		return $queueinfo;
 	}
 
 	//创建用于检测ack的超时子进程，将超时的task重新加入队列中
@@ -121,7 +79,6 @@ class TaskManager {
 			exit();
 		}
 		else if(!$pid) {
-			self::$ischild=true;
 		    while(true) {
 				$task=self::$onProcess->findOne(array('acktime'=>array('$lte'=>time())));
 				if($task!=null){
@@ -185,7 +142,6 @@ class TaskManager {
 		$url=empty($urlinfo['url'])?$task['url']:$urlinfo['url'];
 		
 		if(!isset($urlinfo['error'])){
-			$url=$urlinfo['url'];
 			//对执行结果分配更新任务
 			$response['updatetime']=self::addUpdateTask($urlinfo['url'],$urlinfo['level']);
 			//当level>0时，尝试将连接加入爬虫任务队列
@@ -193,12 +149,6 @@ class TaskManager {
 			if($urlinfo['level']>0 && count($urlinfo['links'])>0){
 				$response['newlinks']=self::addNewTasks($urlinfo['links'],$urlinfo['level']-1);
 			}
-			//保存url信息到队列
-			$urlinfo['time'] = date("Y-m-d H:i:s");
-			unset($urlinfo['code']);
-			unset($urlinfo['links']);
-			unset($urlinfo['level']);
-			self::$transport->insert($urlinfo);
 			//记录任务日志
 			self::$taskLog->insert(array('url'=>$url,'time'=>time(),'type'=>$task['type'],'statu'=>0));
 		}
@@ -265,21 +215,5 @@ class TaskManager {
 		}
 		self::$taskQueue->insert(array('url'=>$url,'level'=>$level,'time'=>$updatetime,'type'=>'update'));
 		return date("Y-m-d H:i:s",$updatetime);
-	}
-
-	//获取队列信息
-	static function getQueueInfo(){
-		$queueinfo=array();
-		//正在处理的任务信息
-		$queueinfo['onprocess'] = iterator_to_array(self::$onProcess->find());
-		//等待爬取的网页总量
-		$queueinfo['new_task'] = self::$taskQueue->count(array('type'=>'new'));
-		//需要更新的网页总量
-		$queueinfo['update_task'] = self::$taskQueue->count(array('type'=>'update','time'=>array('$lte'=>time())));
-		//爬取过的网页总量
-		$queueinfo['new_log'] = self::$taskLog->count(array('type'=>'new'));
-		//等待转储的文档数量
-		$queueinfo['ontransport'] = self::$transport->count();
-		return $queueinfo;
 	}
 }

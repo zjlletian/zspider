@@ -19,8 +19,6 @@
 	<br><br>
 	爬取过的网页总量：<?php echo $queueinfo['new_log'];?>
 	<br><br>
-	待转储列队文档数量：<?php echo $queueinfo['ontransport'];?>
-	<br><br>
 	正在处理中的任务：<?php echo count($queueinfo['onprocess']);?>
 	<br><br>
 	<?php

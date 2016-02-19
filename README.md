@@ -1,12 +1,12 @@
-ZSpider分布式网站爬虫  开发日志 verison 3.0.1
+ZSpider分布式网站爬虫  开发日志 verison 4.0.0
 
 --------------------- 运行前提 ---------------------
 
 1.Elasticsearch-php基于composer构建，运行composer install --no-dev 安装
 
-2.使用pecl install mongo安装mongodb扩展，并添加extension=mongo.so到php.ini
+2.运行脚本需要screen与awk工具支持。
 
-3.运行脚本需要screen与awk工具支持。
+3.使用pecl install mongo安装mongodb扩展，并添加extension=mongo.so到php.ini
 
 
 --------------------- 开发任务 ----------------------
@@ -27,6 +27,13 @@ ZSpider分布式网站爬虫  开发日志 verison 3.0.1
 完善特殊网站的规则。
 
 将simple_html_dom替换成效率更高的解析器。
+
+
+--------------------- 2016-2-18 version 4.0.0 ---------------------
+
+1.自动加载class文件夹下的所有类。
+
+2.将Es操作独立成为EsOpreator,形成结构：TaskManager调度任务,UrlAnalyzer解析网页,EsOpreator执行存储与搜索等es相关操作。
 
 
 --------------------- 2016-2-18 version 3.0.1 ---------------------

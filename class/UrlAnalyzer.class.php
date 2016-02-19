@@ -1,7 +1,5 @@
 <?php
 include_once(dirname(dirname(__FILE__)).'/Config.php');
-include_once('Util.class.php');
-include_once('TaskManager.class.php');
 include_once('SimpleHtmlDom.php');
 
 class UrlAnalyzer{
@@ -14,18 +12,19 @@ class UrlAnalyzer{
 				break;
 			}
 		}
-		return $response ;
+		return $response;
 	}
 
-	//获取url的信息：url重定向后的地址，code状态码，html网页快照内容，text纯文本内容，charset原始字符编码
+	//获取url的信息：url:实际访问的地址，code:状态码，charset:原始字符编码，text:纯文本内容，html:网页快照内容，level:判定后的level，error:错误信息
 	private static function getResponse($url,$level,$referer=null){
 
+		//设置curl
 		$ch = curl_init();
 		//curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
 	    //curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
 		curl_setopt($ch, CURLOPT_URL, $url);
-	 	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, 5000);//设置连接超时时间
-	 	curl_setopt($ch, CURLOPT_TIMEOUT_MS, 5000);//设置超时时间
+	 	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, 3000);//设置连接超时时间
+	 	curl_setopt($ch, CURLOPT_TIMEOUT_MS, 3000);//设置超时时间
 	    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);//1将结果返回，0直接stdout
 	    curl_setopt($ch, CURLOPT_ENCODING, "gzip");//支持gzip
 
@@ -134,25 +133,26 @@ class UrlAnalyzer{
 				$htmldom->load($htmltext);
 
 				//获取标题
-				$response['title']=trim($htmldom->find('title',0)->innertext);
-				if(empty($response['title'])){
+				$title=$htmldom->find('title',0);
+				if($title==null){
 					$response['code'] = 600;
 					throw new Exception("site has no title.");
 				}
+				$response['title']=trim($title->innertext);
 
 				//获取html纯文本内容
-				$body=$htmldom->find('body',0)->innertext;
-				if(empty($body)){
+				$body=$htmldom->find('body',0);
+				if($body==null){
 					$response['code'] = 600;
 					throw new Exception("site has no body.");
 				}
-				$text=self::htmlFilter($body);
+				$text=self::htmlFilter($body->innertext);
 				$response['text']=empty($text)?$response['title']:$text;
 				unset($body);
 				unset($text);
 
-				//网页快照
-				$response['html']=$htmltext;
+				//网页快照（不存储快照，减少es存储空间）
+				//$response['html']=$htmltext;
 
 				//解析网页中的超链接
 				$response['links']=array();

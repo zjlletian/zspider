@@ -3,9 +3,13 @@ define('APPROOT',dirname(__FILE__));
 
 //设置include包含文件所在的所有目录
 $include_path=get_include_path();  
-$include_path.=PATH_SEPARATOR.APPROOT."/lib"; 
-$include_path.=PATH_SEPARATOR.APPROOT."/class";
+$include_path.=PATH_SEPARATOR.APPROOT."/lib";
 set_include_path($include_path);
+
+//包含class文件夹中的所有文件
+foreach(new FilesystemIterator(APPROOT."/class", FilesystemIterator::SKIP_DOTS ) as $classfile){
+	include_once($classfile);
+}
 
 //默认时区
 date_default_timezone_set('Asia/Shanghai');
@@ -24,7 +28,7 @@ $GLOBALS['MONGODB'] = 'localhost:27017';
 $GLOBALS['MAX_HTMLSISE']=1024*2048;
 
 //最大并行任务数量
-$GLOBALS['MAX_PARALLEL']=10;
+$GLOBALS['MAX_PARALLEL']=30;
 
 //不进行追踪的href (完全匹配以下字段)
 $GLOBALS['NOTTRACE_MATCH'] = array(

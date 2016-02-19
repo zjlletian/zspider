@@ -1,8 +1,5 @@
 <?php
 include_once(dirname(dirname(__FILE__)).'/Config.php');
-include_once('UrlAnalyzer.class.php');
-include_once('TaskManager.class.php');
-include_once('Util.class.php');
 
 //标记网络状态
 define('NETERROR',APPROOT.'neterror.tmp');
@@ -20,8 +17,11 @@ if(file_exists(NETERROR)){
 }
 marknetwork();
 
-//连接到mongodb中的队列，启动ack监控子进程与es转储子进程
-TaskManager::init();
+//初始化队列，启动ack监控子进程
+TaskManager::initQueue();
+
+//链接到ES
+EsOpreator::connectES();
 
 //获取到的任务与任务pid
 $tasks=array();
@@ -29,7 +29,7 @@ $taskpid=array();
 
 //循环获取与执行任务
 while(true){
-	//若网络中断则停止运行
+	//若子进程中产生网络中断错误则停止运行
 	if(file_exists(NETERROR)){
 		exit();
 	}
@@ -83,18 +83,22 @@ function handleSpiderTask($task){
 		marknetwork();
 	}
 
+	//保存url信息到ES
+	EsOpreator::upsertUrlInfo($urlinfo);
+
 	//提交任务执行结果
 	$response=TaskManager::submitTask($task,$urlinfo);
 
-	echo "\n\n[".date("Y-m-d H:i:s")."] ";
-	echo "Task Url: ".$task['url']."\n";
-	echo "Type:".($task['type']=='new'? "New  ":"Update  ");
-	echo "Level:".$task['level']."  ";
+	//显示任务信息
 	$delay=time()-$task['time'];
 	$h=intval($delay/3600);
 	$m=intval(($delay-$h*3600)/60);
 	$s=intval(($delay-$h*3600)%60);
 	$delaystr="Delay: ".$h.' hours '.$m.' minutes '.$s." seconds\n";
+	echo "\n\n[".date("Y-m-d H:i:s")."] ";
+	echo $task['url']."\n";
+	echo "Type:".($task['type']=='new'? "New  ":"Update  ");
+	echo "Level:".$task['level']."  ";
 	if($h>24)
 		Util::echoRed($delaystr);
 	elseif($h>12)
