@@ -50,7 +50,13 @@ $GLOBALS['NOTTRACE_HAS'] = array(
 );
 
 //默认更新周期
-$GLOBALS['UPDATE_TIME'] = 3600*24*2;
+$GLOBALS['UPDATE_TIME'] = array(
+	'4'=> 3600*24*2,
+	'3'=> 3600*24*3,
+	'2'=> 3600*24*7,
+	'1'=> 3600*24*15,
+	'0'=> 3600*24*30
+);
 
 //自定义站点更新周期与等级
 $GLOBALS['SITE_UPDATE'] = array(

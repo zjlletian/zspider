@@ -185,7 +185,6 @@ class TaskManager {
 		$url=empty($urlinfo['url'])?$task['url']:$urlinfo['url'];
 		
 		if(!isset($urlinfo['error'])){
-			$statu = 1;
 			$url=$urlinfo['url'];
 			//对执行结果分配更新任务
 			$response['updatetime']=self::addUpdateTask($urlinfo['url'],$urlinfo['level']);
@@ -254,13 +253,15 @@ class TaskManager {
 
 		//分配更新时间
 		if(isset($GLOBALS['SITE_UPDATE'][$url])){
-			if(isset($GLOBALS['SITE_UPDATE'][$url]['time']))
+			if(isset($GLOBALS['SITE_UPDATE'][$url]['time'])){
 				$updatetime=time()+$GLOBALS['SITE_UPDATE'][$url]['time'];
-			if(isset($GLOBALS['SITE_UPDATE'][$url]['level']))
+			}
+			if(isset($GLOBALS['SITE_UPDATE'][$url]['level'])){
 				$level=$GLOBALS['SITE_UPDATE'][$url]['level'];
+			}
 		}
 		else{
-			$updatetime=time()+$GLOBALS['UPDATE_TIME'];
+			$updatetime=time()+$GLOBALS['UPDATE_TIME'][$level.''];
 		}
 		self::$taskQueue->insert(array('url'=>$url,'level'=>$level,'time'=>$updatetime,'type'=>'update'));
 		return date("Y-m-d H:i:s",$updatetime);
