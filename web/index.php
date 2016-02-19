@@ -12,6 +12,8 @@
 </head>
 <body>
 <h2>ZSpider QueueInfo</h2>
+	当前爬去速度：<?php echo $queueinfo['speed1h'];?>（每小时）
+	<br><br>
 	等待爬取的新网页数量：<?php echo $queueinfo['new_task'];?>
 	<br><br>
 	需要更新的网页数量：<?php echo $queueinfo['update_task'];?>

@@ -84,7 +84,9 @@ function handleSpiderTask($task){
 	}
 
 	//保存url信息到ES
-	EsOpreator::upsertUrlInfo($urlinfo);
+	if(!isset($urlinfo['error'])){
+		EsOpreator::upsertUrlInfo($urlinfo);
+	}
 
 	//提交任务执行结果
 	$response=TaskManager::submitTask($task,$urlinfo);

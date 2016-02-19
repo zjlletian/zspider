@@ -44,8 +44,8 @@ class TaskManager {
 		self::$taskQueue->ensureIndex(array('time' => 1)); //time升序 早->晚
 		self::$taskQueue->ensureIndex(array('type' => 1)); //type升序 new->update
 		self::$taskLog->ensureIndex(array('time' => -1)); //time降序 晚->早
-		self::$taskLog->ensureIndex(array('statu' => -1)); //statu降序 1->0
-		self::$taskLog->ensureIndex(array('type' => 1)); //type降序 new->update
+		self::$taskLog->ensureIndex(array('statu' => -1)); //statu降序 2->0
+		self::$taskLog->ensureIndex(array('type' => 1)); //type升序 new->update
 
 		//启动ack监视子进程
 		self::srartAckWatcher();
@@ -67,6 +67,8 @@ class TaskManager {
 		$queueinfo['update_task'] = self::$taskQueue->count(array('type'=>'update','time'=>array('$lte'=>time())));
 		//爬取过的网页总量
 		$queueinfo['new_log'] = self::$taskLog->count(array('type'=>'new'));
+		//近一小时内爬取的数量
+		$queueinfo['speed1h'] = self::$taskLog->count(array('time'=>array('$gte'=>time()-3600)));
 		return $queueinfo;
 	}
 
