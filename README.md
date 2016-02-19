@@ -33,7 +33,7 @@ ZSpider分布式网站爬虫  开发日志 verison 4.0.0
 
 1.自动加载class文件夹下的所有类。
 
-2.将Es操作独立成为EsOpreator,形成结构：TaskManager调度任务,UrlAnalyzer解析网页,EsOpreator执行存储与搜索等es相关操作。
+2.将ES的存储与搜索等相关操作独立成为EsOpreator,使TaskManager专注于调度任务。
 
 
 --------------------- 2016-2-18 version 3.0.1 ---------------------
