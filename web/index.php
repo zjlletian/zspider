@@ -12,13 +12,9 @@
 </head>
 <body>
 <h2>ZSpider QueueInfo</h2>
-	当前爬去速度：<?php echo $queueinfo['speed1h'];?>（每小时）
-	<br><br>
 	等待爬取的新网页数量：<?php echo $queueinfo['new_task'];?>
 	<br><br>
 	需要更新的网页数量：<?php echo $queueinfo['update_task'];?>
-	<br><br>
-	爬取过的网页总量：<?php echo $queueinfo['new_log'];?>
 	<br><br>
 	正在处理中的任务：<?php echo count($queueinfo['onprocess']);?>
 	<br><br>

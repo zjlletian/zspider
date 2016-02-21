@@ -8,7 +8,7 @@ class UrlAnalyzer{
 	static function getInfo($url,$level){
 		for($count=1; $count<=3; $count++){
 			$response=self::getResponse($url,$level);
-			if(!isset($response['error']) || $response['code']==600){
+			if(!isset($response['error']) || $response['code']==600 || $response['code']==700){
 				break;
 			}
 		}
@@ -16,7 +16,7 @@ class UrlAnalyzer{
 	}
 
 	//获取url的信息：url:实际访问的地址，code:状态码，charset:原始字符编码，text:纯文本内容，html:网页快照内容，level:判定后的level，error:错误信息
-	private static function getResponse($url,$level,$referer=null){
+	static function getResponse($url,$level,$referer=null,$istest=false){
 
 		//设置curl
 		$ch = curl_init();
@@ -67,7 +67,9 @@ class UrlAnalyzer{
 					$url=$redirect_url;
 
 					//判断地址是否需要处理
-					$level=TaskManager::isHandled($redirect_url,$level);
+					if(!$istest){
+						$level=TaskManager::isHandled($redirect_url,$level);
+					}
 					if($level==-1){
 						$response['code'] = 600;
 						throw new Exception("redirect url has been or is being handled.");
@@ -140,7 +142,7 @@ class UrlAnalyzer{
 				}
 				$response['title']=trim($title->innertext);
 
-				//获取html纯文本内容
+				//获取html中纯文本内容
 				$body=$htmldom->find('body',0);
 				if($body==null){
 					$response['code'] = 600;
@@ -151,8 +153,8 @@ class UrlAnalyzer{
 				unset($body);
 				unset($text);
 
-				//网页快照（不存储快照，减少es存储空间）
-				//$response['html']=$htmltext;
+				//网页快照
+				$response['html']=$htmltext;
 
 				//解析网页中的超链接
 				$response['links']=array();
@@ -193,7 +195,7 @@ class UrlAnalyzer{
 		$search = array (
 			"'<script[^>]*?>.*?</script>'si",
 			"'<style[^>]*?>.*?</style>'si", 
-			"'<a[^>]*?>.*?</a>'si",
+			/*"'<a[^>]*?>.*?</a>'si",*/
 			"'<img[^>]*?>.*?</img>'si",
 			"'<input[^>]*?>.*?</input>'si",
 			"'<!--[/!]*?[^<>]*?>'si",
@@ -210,7 +212,7 @@ class UrlAnalyzer{
 			"'&#(d+);'e"
 		);
 		//去除标签以及innertext
-		$htmltext = preg_replace($search,"   ", $htmltext);
+		$htmltext = preg_replace($search," ", $htmltext);
 		//去除'<></>'标签
 		return strip_tags($htmltext);
 	}

@@ -3,6 +3,12 @@ include_once(dirname(dirname(__FILE__)).'/Config.php');
 
 class Util{
 
+	//检查网络状态，如果网络不通畅则
+	static function isNetError(){
+		$check = @fopen('http://www.baidu.com',"r"); 
+		return !$check;
+	}
+
 	//字符串startwith
 	static function strStartWith($str, $needle){
 		return strpos($str, $needle) === 0;
@@ -15,12 +21,6 @@ class Util{
 			return true;  
 		}  
 		return (substr($str, -$length) === $needle);
-	}
-
-	//检查网络状态
-	static function checkNetwork(){
-		$check = @fopen('http://www.baidu.com',"r"); 
-		return $check;
 	}
 
 	//输出红色字

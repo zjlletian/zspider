@@ -1,14 +1,19 @@
 <?php
 define('APPROOT',dirname(__FILE__));
+define('SPIDERPID',APPROOT.'/zspider.pid');
+define('QUEUEPID',APPROOT.'/queue.pid');
 
 //设置include包含文件所在的所有目录
 $include_path=get_include_path();  
 $include_path.=PATH_SEPARATOR.APPROOT."/lib";
 set_include_path($include_path);
 
-//包含class文件夹中的所有文件
+//包含class文件夹中的所有.class.php文件
+include_once(APPROOT.'/class/Util.class.php');
 foreach(new FilesystemIterator(APPROOT."/class", FilesystemIterator::SKIP_DOTS ) as $classfile){
-	include_once($classfile);
+	if(Util::strEndWith($classfile,'.class.php') && $classfile!=APPROOT.'/class/Util.class.php'){
+		include_once($classfile);
+	}
 }
 
 //默认时区
@@ -19,8 +24,14 @@ date_default_timezone_set('Asia/Shanghai');
 //Elasticsearch集群地址（多个master的地址）
 $GLOBALS['ELASTICSEARCH'] = array('http://localhost:9200');
 
-//Mongodb地址（爬虫任务队列，转储队列）
-$GLOBALS['MONGODB'] = 'localhost:27017';
+//mysql地址
+$GLOBALS['MYSQL'] = array(
+	'host'=>'localhost',
+	'port'=>'3306',
+	'db'=>'zspider',
+	'user'=>'root',
+	'passwd'=>'imzjl'
+);
 
 //----------------------------------爬虫相关规则配置---------------------------------------
 
