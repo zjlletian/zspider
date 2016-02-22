@@ -43,13 +43,12 @@ $GLOBALS['MAX_PARALLEL']=30;
 
 //不进行追踪的href (完全匹配以下字段)
 $GLOBALS['NOTTRACE_MATCH'] = array(
-	'/'
+	'./'
 );
 
 //不进行追踪的href (以以下字段开头)
 $GLOBALS['NOTTRACE_BEGIN'] = array(
 	'#',
-	'./#',
 	'ftp:',
 	'file:',
 	'javascript:'

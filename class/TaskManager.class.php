@@ -193,7 +193,7 @@ class TaskManager {
 		$queueinfo['new_task']=mysqli_fetch_assoc(self::$mysqli->query("select count(*) as count from taskqueue where type=0"))['count'];
 
 		//需要更新的网页数量
-		$queueinfo['update_task']=mysqli_fetch_assoc(self::$mysqli->query("select count(*) as count from taskqueue where type=1 and time<".time()))['count'];
+		$queueinfo['update_task']=mysqli_fetch_assoc(self::$mysqli->query("select count(*) as count from taskqueue where type=1 and time<=".time()))['count'];
 
 		//正在执行的任务
 		$result=self::$mysqli->query("select * from onprocess where acktime>".time());

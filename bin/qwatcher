@@ -1,0 +1,81 @@
+#!/bin/sh
+
+#帮助信息
+function showhelp(){
+	echo -e "List of valid commands:"
+	echo -e "start  :  start queue watcher by screen tool."
+	echo -e "stop   :  kill queue watcher screen and other progresses."
+	echo -e "screen :  same to run 'screen -r qwatcher'."
+	echo -e "status :  show running status of queue watcher.\n"
+}
+
+#启动Queue watcher
+function start(){
+	ps aux | awk '/qwatcher\.php/ && !/awk/ { print $0 >> "qwatcher.run"; }'
+	if [ -f qwatcher.run ];then
+		echo -e "Queue watcher exists, start failed."
+		rm qwatcher.run -f
+		exit 0
+	fi
+	screen -dmS qwatcher php $(cd `dirname $0`; cd ../; pwd)/phpcli/qwatcher.php byscreen
+	echo -e "Queue watcher is now runing."
+}
+
+#停止Queue watcher
+function stop(){
+	ps aux | awk '/SCREEN -dmS qwatcher/ && !/awk/ {system("kill -9 "$2);}'
+	ps aux | awk '/qwatcher\.php/ && !/awk/ {system("kill -9 "$2);}'
+	echo -e "Queue watcher stoped."
+	screen -wipe > /dev/null
+}
+
+#显示进程状态
+function status(){
+	ps aux | awk '
+	BEGIN{
+		count=0;
+		lines="";
+		"cat /proc/cpuinfo| grep processor| wc -l" | getline cpus;
+	}
+	/qwatcher\.php/&& !/awk/ && !/SCREEN -dmS/ || NR==1{
+		if(NR!=1){
+			cpu+=$3;
+			mem+=$6;
+			count+=1;
+			lines=lines$0"\n";
+		}
+		else{
+			head=$0;
+		}
+	}
+	END {
+		if(count>0){
+			print head;
+			print lines;
+			print "Process count:"count"\nCPU:"cpu/cpus"%\nMemory:"mem/1024"MB\n";
+		}
+		else{
+			print "Queue watcher is not runing.";
+		}
+	}'
+}
+
+#检查参数个数
+if [ $# -ne 1 ];then
+	echo -e "Copyright (c) 2000-2016, ZJLUP All rights reserved.\n"
+	showhelp
+	exit 0
+fi
+
+if [ $1 = 'start' ];then
+	start
+elif [ $1 = 'stop' ];then
+	stop
+elif [ $1 = 'screen' ];then
+	screen -r qwatcher
+elif [ $1 = 'status' ];then
+	status
+else
+	echo -e "Command error. \c"
+	showhelp
+fi

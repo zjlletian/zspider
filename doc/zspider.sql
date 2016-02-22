@@ -1,16 +1,16 @@
 /*
 Navicat MySQL Data Transfer
 
-Source Server         : zhou-vm
-Source Server Version : 50629
-Source Host           : 192.168.1.105:3306
+Source Server         : zhoujunlong.dev
+Source Server Version : 50173
+Source Host           : zhoujunlong.dev:3306
 Source Database       : zspider
 
 Target Server Type    : MYSQL
-Target Server Version : 50629
+Target Server Version : 50173
 File Encoding         : 65001
 
-Date: 2016-02-21 02:45:16
+Date: 2016-02-22 10:34:56
 */
 
 SET FOREIGN_KEY_CHECKS=0;
@@ -20,11 +20,11 @@ SET FOREIGN_KEY_CHECKS=0;
 -- ----------------------------
 DROP TABLE IF EXISTS `notupdate`;
 CREATE TABLE `notupdate` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `url` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `url_unique` (`url`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Table structure for onprocess
@@ -39,7 +39,7 @@ CREATE TABLE `onprocess` (
   `acktime` int(11) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `url_unique` (`url`)
-) ENGINE=InnoDB AUTO_INCREMENT=1099 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Table structure for taskqueue
@@ -54,4 +54,5 @@ CREATE TABLE `taskqueue` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `url_unique` (`url`) USING BTREE,
   KEY `time_sort` (`time`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=40338 DEFAULT CHARSET=utf8;
+  KEY `type_sort` (`type`) USING BTREE
+) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;

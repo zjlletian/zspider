@@ -58,11 +58,15 @@ class UrlAnalyzer{
 				if(intval($response['code']/100)==3 || $response['url']!=$url){
 					if(empty($responseheader['redirect_url'])){
 						$redirect_url=$response['url'];
-						//Util::echoYellow("Redirect[301]: ".$redirect_url."\n");
+						if($istest){
+							Util::echoYellow("Redirect[301]: ".$redirect_url."\n");
+						}
 					}
 					else{
 						$redirect_url=$responseheader['redirect_url'];
-						//Util::echoYellow("Redirect[302]: ".$redirect_url."\n");
+						if($istest){
+							Util::echoYellow("Redirect[302]: ".$redirect_url."\n");
+						}
 					}
 					$url=$redirect_url;
 
@@ -159,7 +163,7 @@ class UrlAnalyzer{
 				//解析网页中的超链接
 				$response['links']=array();
 				foreach ($htmldom->find('a') as $a) {
-			    	$href=self::transformHref(trim($a->href),$response['url']);
+			    	$href=self::transformHref($a->href,$response['url']);
 			    	if($href!=false){
 			    		if(!in_array($href,$response['links']))
 			    			$response['links'][]=$href;
@@ -225,19 +229,28 @@ class UrlAnalyzer{
 		}
 		//不处理的超链接，开头
 		foreach ($GLOBALS['NOTTRACE_BEGIN'] as $nottrace) {
-			if(Util::strStartWith($href,$nottrace))
+			if(Util::strStartWith($href,$nottrace)){
 				return false;
+			}
 		}
 		//不处理的超链接，包涵
 		foreach ($GLOBALS['NOTTRACE_HAS'] as $nottrace) {
-			if(strpos($href,$nottrace) !== false)
+			if(strpos($href,$nottrace) !== false){
 				return false;
+			}
 		}
 		return true;
 	}
 
 	//修正url路径
 	private static function transformHref($href,$baseurl){
+
+		//去除url中的空格以及控制字符
+		$href=trim($href);
+		if(Util::strStartWith($href,'./')){
+			$href=ltrim($href,'./');
+		}
+		$href=strtr($href, array('&nbsp;'=>'','&nbsp'=>''));
 
 		//去除href后面的#
 		$hrefsharppos=strpos($href,"#");
@@ -246,31 +259,30 @@ class UrlAnalyzer{
 		}
 
 		//检查href
-		if(!self::checkHref($href)){
+		if(empty($href) || !self::checkHref($href)){
 			return false;
 		}
-		//以协议开头的,直接使用
-		if(Util::strStartWith($href,'http://')||Util::strStartWith($href,'https://')) { 
+
+		//以协议开头的直接使用
+		if(Util::strStartWith($href,'http://')||Util::strStartWith($href,'https://')) {
+			if(empty(ltrim(ltrim($href,'http://'),'https://'))){
+				return false;
+			}
 			return $href;
 		}
-		//继承baseurl的协议
-		elseif(Util::strStartWith($href,'//')) { 
+		else{
+			//获取协议 $protocol
 			if(Util::strStartWith($baseurl,'http://')){
-				return 'http:'.$href;
-			}
-			elseif(Util::strStartWith($baseurl,'https://')){
-				return 'https:'.$href;
-			}
-		}
-		//继承baseurl的路径
-		else{ 
-			//获取协议
-			if(Util::strStartWith($baseurl,'http:')){
 				$protocol='http://';
 			}
-			elseif(Util::strStartWith($baseurl,'https:')){
+			else if(Util::strStartWith($baseurl,'https://')){
 				$protocol='https://';
 			}
+			else{
+				return false;
+			}
+
+			//获取url地址 $baseurl
 			$baseurl=ltrim($baseurl,$protocol);
 			//去除url后面的参数
 			$argpos=strpos($baseurl,"?");
@@ -282,6 +294,7 @@ class UrlAnalyzer{
 			if($sharppos!==false){
 				$baseurl=substr($baseurl,0,$sharppos);
 			}
+
 			//继承baseurl地址的绝对路径或相对路径
 			if(Util::strStartWith($href,'/')) {
 				$hostpos=strpos($baseurl,"/");
@@ -293,11 +306,7 @@ class UrlAnalyzer{
 			if($hostpos!=false){
 				$baseurl=substr($baseurl,0,$hostpos+1);
 			}
-			if(Util::strStartWith($href,'./')){
-				$href=ltrim($href,'./');
-			}
 			return $protocol.$baseurl.$href;
 		}
-		return false;
 	}
 }
