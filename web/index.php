@@ -1,5 +1,5 @@
 <?php
-	include_once(dirname(dirname(__FILE__)).'/Config.php');
+	require_once(dirname(dirname(__FILE__)).'/Config.php');
 	TaskManager::connect();
 	$queueinfo=TaskManager::getQueueInfo();
 ?>

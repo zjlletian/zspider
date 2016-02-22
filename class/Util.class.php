@@ -1,5 +1,5 @@
 <?php
-include_once(dirname(dirname(__FILE__)).'/Config.php');
+require_once(dirname(dirname(__FILE__)).'/Config.php');
 
 class Util{
 
@@ -7,6 +7,20 @@ class Util{
 	static function isNetError(){
 		$check = @fopen('http://www.baidu.com',"r"); 
 		return !$check;
+	}
+
+	//记录错误日志
+	static function putErrorLog($log){
+		$errorpath=APPROOT."/log";
+		$errorfile=APPROOT."/log/error.log";
+    	if(!file_exists($errorpath)){
+    		mkdir($errorpath);
+    	}
+    	if(!file_exists($errorfile)){
+    		touch($errorfile);
+    	}
+    	$str ='['.date('Y-m-d h-i-s').'] '.$log."\r\n";
+		file_put_contents($errorfile, $str, FILE_APPEND);
 	}
 
 	//字符串startwith

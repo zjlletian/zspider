@@ -1,39 +1,35 @@
 <?php
 define('APPROOT',dirname(__FILE__));
-define('SPIDERPID',APPROOT.'/zspider.pid');
-define('QUEUEPID',APPROOT.'/queue.pid');
+
+//--------------------------------- ZJLUP PHP框架配置 --------------------------------------
 
 //设置include包含文件所在的所有目录
 $include_path=get_include_path();  
 $include_path.=PATH_SEPARATOR.APPROOT."/lib";
+$include_path.=PATH_SEPARATOR.APPROOT."/class";
 set_include_path($include_path);
 
 //包含class文件夹中的所有.class.php文件
-include_once(APPROOT.'/class/Util.class.php');
-foreach(new FilesystemIterator(APPROOT."/class", FilesystemIterator::SKIP_DOTS ) as $classfile){
-	if(Util::strEndWith($classfile,'.class.php') && $classfile!=APPROOT.'/class/Util.class.php'){
-		include_once($classfile);
-	}
+foreach(new FilesystemIterator(APPROOT."/class", FilesystemIterator::SKIP_DOTS ) as $classfile) {
+	require_once($classfile);
+}
+
+//加载数据库配置
+require_once(APPROOT."/db.inc.php");
+
+//加载邮件发送端设置
+if(file_exists(APPROOT."/email.inc.php")){
+	require_once(APPROOT."/email.inc.php");
+}
+else{
+	$GLOBALS['SEND_EMAIL'] = false;
 }
 
 //默认时区
 date_default_timezone_set('Asia/Shanghai');
 
-//----------------------------------存储服务器配置--------------------------------------
 
-//Elasticsearch集群地址（多个master的地址）
-$GLOBALS['ELASTICSEARCH'] = array('http://localhost:9200');
-
-//mysql地址
-$GLOBALS['MYSQL'] = array(
-	'host'=>'localhost',
-	'port'=>'3306',
-	'db'=>'zspider',
-	'user'=>'root',
-	'passwd'=>'imzjl'
-);
-
-//----------------------------------爬虫相关规则配置---------------------------------------
+//--------------------------------- 爬虫相关规则配置 --------------------------------------
 
 //最大网页大小 2M
 $GLOBALS['MAX_HTMLSISE']=1024*2048;

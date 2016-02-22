@@ -1,13 +1,13 @@
 <?php
-include_once(dirname(dirname(__FILE__)).'/Config.php');
-include_once('SimpleHtmlDom.php');
+require_once(dirname(dirname(__FILE__)).'/Config.php');
+require_once('SimpleHtmlDom.php');
 
 class UrlAnalyzer{
 
 	//对url尝试3次获取信息
 	static function getInfo($url,$level){
 		for($count=1; $count<=3; $count++){
-			$response=self::getResponse($url,$level);
+			$response=self::getInfoOnce($url,$level);
 			if(!isset($response['error']) || $response['code']==600 || $response['code']==700){
 				break;
 			}
@@ -16,7 +16,7 @@ class UrlAnalyzer{
 	}
 
 	//获取url的信息：url:实际访问的地址，code:状态码，charset:原始字符编码，text:纯文本内容，html:网页快照内容，level:判定后的level，error:错误信息
-	static function getResponse($url,$level,$referer=null,$istest=false){
+	static function getInfoOnce($url,$level,$referer=null,$istest=false){
 
 		//设置curl
 		$ch = curl_init();
@@ -55,20 +55,29 @@ class UrlAnalyzer{
 				$response['code'] = $responseheader['http_code'];
 
 				//判断地址是否被重定向，没有重定向则退出循环.301重定向在curl中的code是200，要用$response['url']!=$url判断
+				$redirectcode=302;
 				if(intval($response['code']/100)==3 || $response['url']!=$url){
 					if(empty($responseheader['redirect_url'])){
 						$redirect_url=$response['url'];
+						$redirectcode=301;
 						if($istest){
 							Util::echoYellow("Redirect[301]: ".$redirect_url."\n");
 						}
 					}
 					else{
 						$redirect_url=$responseheader['redirect_url'];
+						$redirectcode=302;
 						if($istest){
 							Util::echoYellow("Redirect[302]: ".$redirect_url."\n");
 						}
 					}
 					$url=$redirect_url;
+
+					//检查重定向地址是否有效
+					if(!self::checkHref($redirect_url)){
+						$response['code'] = 600;
+						throw new Exception("redirect url was marked to not trace.");
+					}
 
 					//判断地址是否需要处理
 					if(!$istest){
@@ -78,14 +87,14 @@ class UrlAnalyzer{
 						$response['code'] = 600;
 						throw new Exception("redirect url has been or is being handled.");
 					}
-					//检查重定向地址是否有效
-					if(!self::checkHref($redirect_url)){
-						$response['code'] = 600;
-						throw new Exception("redirect url was marked to not trace.");
+
+					//如果是302需要以重定向地址重新获取，301不需要
+					if($redirectcode==301) {
+						break;
 					}
 					curl_setopt($ch, CURLOPT_URL, $redirect_url);
 				}
-				else{
+				else {
 					break;
 				}
 			}
@@ -159,11 +168,12 @@ class UrlAnalyzer{
 
 				//网页快照
 				$response['html']=$htmltext;
-
+				
 				//解析网页中的超链接
+				$baseurl=self::urlSplit($response['url']);
 				$response['links']=array();
 				foreach ($htmldom->find('a') as $a) {
-			    	$href=self::transformHref($a->href,$response['url']);
+			    	$href=self::transformHref($a->href, $baseurl);
 			    	if($href!=false){
 			    		if(!in_array($href,$response['links']))
 			    			$response['links'][]=$href;
@@ -221,6 +231,65 @@ class UrlAnalyzer{
 		return strip_tags($htmltext);
 	}
 
+	//将url拆分,返回：协议，主机地址，路径，文档名，参数
+	static function urlSplit($baseurl){
+
+		//去除url后面的#
+		$sharppos=strpos($baseurl,"#");
+		if($sharppos!==false){
+			$baseurl=substr($baseurl,0,$sharppos);
+		}
+
+		//获取协议 $protocol
+		if(Util::strStartWith($baseurl,'http://')){
+			$info['protocol']='http://';
+		}
+		else if(Util::strStartWith($baseurl,'https://')){
+			$info['protocol']='https://';
+		}
+		else{
+			return false;
+		}
+		$baseurl=ltrim($baseurl,$info['protocol']);
+
+		//获取url中的参数
+		$argpos=strpos($baseurl,"?");
+		if($argpos!==false){
+			$info['args']=substr($baseurl,$argpos);
+			$baseurl=substr($baseurl,0,$argpos);
+		}
+		else{
+			$info['args']='';
+		}
+		$info['args']=trim($info['args']);
+
+		//获取文档名
+		$filepos=strrpos($baseurl,"/");
+		if($filepos!==false){
+			$info['file']= substr($baseurl,$filepos+1)==false? "":substr($baseurl,$filepos+1);
+			$baseurl=substr($baseurl,0,$filepos+1);
+		}
+		else{
+			$info['file']='';
+		}
+		$info['file']=trim($info['file']);
+
+		//获取主机名与路径
+		$pathpos=strpos($baseurl,"/");
+		if($pathpos!==false){
+			$info['path']=substr($baseurl,$pathpos);
+			$info['host']=substr($baseurl,0,$pathpos);
+		}
+		else{
+			$info['path']='/';
+			$info['host']=$baseurl;
+		}
+		$info['path']=trim($info['path']);
+		$info['host']=trim($info['host']);
+
+		return $info;
+	}
+
 	//检查href是否可用
 	static function checkHref($href){
 		//不处理的超链接，全匹配
@@ -243,19 +312,15 @@ class UrlAnalyzer{
 	}
 
 	//修正url路径
-	private static function transformHref($href,$baseurl){
-
+	private static function transformHref($href, $baseurl){
 		//去除url中的空格以及控制字符
 		$href=trim($href);
-		if(Util::strStartWith($href,'./')){
-			$href=ltrim($href,'./');
-		}
 		$href=strtr($href, array('&nbsp;'=>'','&nbsp'=>''));
 
 		//去除href后面的#
-		$hrefsharppos=strpos($href,"#");
-		if($hrefsharppos!==false){
-			$href=substr($href,0,$hrefsharppos);
+		$sharppos=strpos($href,"#");
+		if($sharppos!==false){
+			$href=substr($href,0,$sharppos);
 		}
 
 		//检查href
@@ -263,50 +328,22 @@ class UrlAnalyzer{
 			return false;
 		}
 
-		//以协议开头的直接使用
-		if(Util::strStartWith($href,'http://')||Util::strStartWith($href,'https://')) {
-			if(empty(ltrim(ltrim($href,'http://'),'https://'))){
+		//以协议开头的直接使用，以'/'开头的使用绝对路径，其他情况使用相对路径
+		if(Util::strStartWith($href,'http://') || Util::strStartWith($href,'https://')) {
+			$url=self::urlSplit($href);
+			if($url==false){
 				return false;
 			}
-			return $href;
+			return $url['protocol'].$url['host'].$url['path'].$url['file'].$url['args'];
+		}
+		elseif(Util::strStartWith($href,'/')) {
+			return $baseurl['protocol'].$baseurl['host'].$href;
 		}
 		else{
-			//获取协议 $protocol
-			if(Util::strStartWith($baseurl,'http://')){
-				$protocol='http://';
+			if(Util::strStartWith($href,'./')) {
+				$href=ltrim($href,'./');
 			}
-			else if(Util::strStartWith($baseurl,'https://')){
-				$protocol='https://';
-			}
-			else{
-				return false;
-			}
-
-			//获取url地址 $baseurl
-			$baseurl=ltrim($baseurl,$protocol);
-			//去除url后面的参数
-			$argpos=strpos($baseurl,"?");
-			if($argpos!==false){
-				$baseurl=substr($baseurl,0,$argpos);
-			}
-			//去除url后面的#
-			$sharppos=strpos($baseurl,"#");
-			if($sharppos!==false){
-				$baseurl=substr($baseurl,0,$sharppos);
-			}
-
-			//继承baseurl地址的绝对路径或相对路径
-			if(Util::strStartWith($href,'/')) {
-				$hostpos=strpos($baseurl,"/");
-				$href=ltrim($href,'/');
-			}
-			else{
-				$hostpos=strrpos($baseurl,"/");
-			}
-			if($hostpos!=false){
-				$baseurl=substr($baseurl,0,$hostpos+1);
-			}
-			return $protocol.$baseurl.$href;
+			return $baseurl['protocol'].$baseurl['host'].$baseurl['path'].$href;
 		}
 	}
 }

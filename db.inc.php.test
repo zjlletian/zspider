@@ -1,0 +1,16 @@
+<?php
+require_once(dirname(__FILE__).'/Config.php');
+
+//-------------------- 存储服务器配置 --------------------
+
+//Elasticsearch集群地址（多个master的地址）
+$GLOBALS['ELASTICSEARCH'] = array('http://localhost:9200');
+
+//mysql地址
+$GLOBALS['MYSQL'] = array(
+	'host'=>'localhost',
+	'port'=>'3306',
+	'db'=>'zspider',
+	'user'=>'user',
+	'passwd'=>'passwd'
+);

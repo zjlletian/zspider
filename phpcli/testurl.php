@@ -1,9 +1,9 @@
 <?php
-include_once(dirname(dirname(__FILE__)).'/Config.php');
+require_once(dirname(dirname(__FILE__)).'/Config.php');
 
-$url=isset($argv[1])? $argv[1] : 'http://zjlup.com';
+$url=isset($argv[1])? $argv[1] : 'http://zjlup.com/';
 
-$urlinfo=UrlAnalyzer::getResponse($url,0,null,true);
+$urlinfo=UrlAnalyzer::getInfoOnce($url,0,null,true);
 
 if(!isset($urlinfo['error'])){
 	echo "Url: ".$urlinfo['url']."\n";

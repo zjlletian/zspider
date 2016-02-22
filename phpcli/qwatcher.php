@@ -1,5 +1,5 @@
 <?php
-include_once(dirname(dirname(__FILE__)).'/Config.php');
+require_once(dirname(dirname(__FILE__)).'/Config.php');
 
 //检查是否以screen运行
 if(count($argv)!=2 || $argv[1]!='byscreen'){

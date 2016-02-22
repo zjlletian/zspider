@@ -1,5 +1,15 @@
 <?php
-include_once(dirname(dirname(__FILE__)).'/Config.php');
+require_once(dirname(dirname(__FILE__)).'/Config.php');
+
+//捕获fatalError
+function fatalErrorHandler(){
+	$types=array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR);
+	$e = error_get_last();
+	if(in_array($e['type'],$types)){
+		$str="TaskHandler stop. message:".$e['message']." file:".$e['file']."(".$e['line'].")";
+	}
+	Util::putErrorLog($str);
+}
 
 class TaskHandler {
 
@@ -7,6 +17,7 @@ class TaskHandler {
 	static function createProgress() {
 		$pid = pcntl_fork();
 		if(!$pid) {
+			register_shutdown_function('fatalErrorHandler');
 			self::runTask();
 		}
 		else{
@@ -18,8 +29,10 @@ class TaskHandler {
 	private static function runTask(){
 		//连接到mysql中的任务队列
 		TaskManager::connect();
-		//连接到ES
-		ESConnector::connect();
+
+		//连接到ES,创建索引
+		EsOpreator::initIndex();
+
 		//循环获取任务
 		while(true){
 		    $task=TaskManager::getTask();
@@ -41,6 +54,7 @@ class TaskHandler {
 		if($urlinfo['code']==0){
 			if(Util::isNetError()){
 				Util::echoRed("Network is error.\n");
+				Util::putErrorLog("TaskHandler stop. Network is error.");
 				exit();
 			}
 		}
@@ -51,7 +65,31 @@ class TaskHandler {
 		}
 
 		//提交任务执行结果
-		$response=TaskManager::submitTask($task,$urlinfo);
+		TaskManager::submitTask($task,$urlinfo);
+
+		//记录任务日志
+		if(!isset($urlinfo['error'])){
+			$log['url']=$urlinfo['url'];
+			$log['level']=$urlinfo['level'];
+			$log['type']=$task['type']==0?"New":"Update";
+			$logtype="suc";
+		}
+		elseif($urlinfo['code']==600){
+			$log['url']=$task['url'];
+			$log['level']=$task['level'];
+			$log['type']=$task['type']==0?"New":"Update";
+			$log['message']=$urlinfo['error'];
+			$logtype="cancel";
+		}
+		else{
+			$log['url']=$task['url'];
+			$log['level']=$task['level'];
+			$log['type']=$task['type']==0?"New":"Update";
+			$log['code']=$urlinfo['code'];
+			$logtype="error";
+		}
+		EsOpreator::putLog($log,$logtype);
+		unset($log);
 		unset($urlinfo);
 		unset($response);
 	}

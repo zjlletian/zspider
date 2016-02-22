@@ -1,6 +1,6 @@
 <?php 
-include_once(dirname(dirname(__FILE__)).'/Config.php');
-include_once('elasticsearch/vendor/autoload.php');
+require_once(dirname(dirname(__FILE__)).'/Config.php');
+require_once('elasticsearch/vendor/autoload.php');
 
 class ESConnector {
 	
@@ -15,11 +15,14 @@ class ESConnector {
 	}
 
 	//创建Index
-	static function createIndex($index){
+	static function createIndex($indexname,$body=null){
 		try{
 			$params = [
-				'index' => $index
+				'index' => $indexname
 			];
+			if($body!=null){
+				$params['body'] = $body;
+			}
 			return self::$esclient->indices()->create($params);
 		}
 		catch(Exception $e){
@@ -84,7 +87,6 @@ class ESConnector {
 		catch(Exception $e){
 			return false;
 		}
-		
 	}
 
 	//更新document

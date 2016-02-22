@@ -1,5 +1,5 @@
 <?php
-include_once(dirname(dirname(__FILE__)).'/Config.php');
+require_once(dirname(dirname(__FILE__)).'/Config.php');
 
 //检查是否以screen运行
 if(count($argv)!=2 || $argv[1]!='byscreen'){
@@ -14,6 +14,7 @@ if(Util::isNetError()){
 }
 
 echo "Create progress for TaskHandler...\n";
+
 //批量创建爬虫进程
 $pids=array();
 for($count=1; $count<=$GLOBALS['MAX_PARALLEL']; $count++){
@@ -28,4 +29,5 @@ for($count=1; $count<count($pids); $count++){
 	Util::echoRed("One of TaskHandler exit, remaining TaskHandler progress:".(count($pids)-$count)."\n");
 }
 
-Util::echoRed("All TaskHandler progress exit\n");
+Util::echoRed("All TaskHandler progress exit.\n");
+Util::putErrorLog("---------------------- All TaskHandler progress exit -----------------------\r\n\r\n");

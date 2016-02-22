@@ -53,6 +53,6 @@ CREATE TABLE `taskqueue` (
   `type` int(11) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `url_unique` (`url`) USING BTREE,
-  KEY `time_sort` (`time`) USING BTREE
+  KEY `time_sort` (`time`) USING BTREE,
   KEY `type_sort` (`type`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
