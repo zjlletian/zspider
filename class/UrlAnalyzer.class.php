@@ -23,8 +23,8 @@ class UrlAnalyzer{
 		//curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
 	    //curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
 		curl_setopt($ch, CURLOPT_URL, $url);
-	 	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, 3000);//设置连接超时时间
-	 	curl_setopt($ch, CURLOPT_TIMEOUT_MS, 3000);//设置超时时间
+	 	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, 5000);//设置连接超时时间
+	 	curl_setopt($ch, CURLOPT_TIMEOUT_MS, 5000);//设置超时时间
 	    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);//1将结果返回，0直接stdout
 	    curl_setopt($ch, CURLOPT_ENCODING, "gzip");//支持gzip
 
@@ -115,8 +115,15 @@ class UrlAnalyzer{
 					throw new Exception("doctype is not html.");
 				}
 
-				//使用content_type获取字符编码，若未检出，则使用编码检测函数检测方式获取
+				//判断是否空内容
+				if(strlen($htmltext)==0){
+					$response['code'] = 100;
+					throw new Exception("empty html");
+				}
+
+				//使用ContentType获取字符编码，若未检出，则使用编码检测函数检测方式获取
 				$charset ='';
+				$charsets=array("UTF-8","ISO-8859-1","GBK","GB2312");
 				foreach (explode(";",$contentType) as $ct) {
 					$ctkv=explode("=",$ct);
 					if(count($ctkv)==2 && $ctkv[0]=='CHARSET'){
@@ -124,8 +131,8 @@ class UrlAnalyzer{
 						break;
 					}
 				}
-				if($charset ==''){
-					$charset = mb_detect_encoding($htmltext, array('UTF-8','GBK','GB2312'));
+				if(!in_array($charset,$charsets)){
+					$charset = mb_detect_encoding($htmltext, $charsets);
 				}
 				//如果未检测出字符编码则返回错误，否则字符集转换为UTF-8
 				if($charset ==''){
@@ -133,7 +140,7 @@ class UrlAnalyzer{
 		    		throw new Exception("unknown charset.");
 				}
 				elseif ($charset != "UTF-8"){
-					$htmltext = mb_convert_encoding($htmltext, 'UTF-8', $charset);
+					$htmltext = mb_convert_encoding($htmltext, 'UTF-8');
 				}
 				$response['charset']= $charset;
 
@@ -175,8 +182,12 @@ class UrlAnalyzer{
 				foreach ($htmldom->find('a') as $a) {
 			    	$href=self::transformHref($a->href, $baseurl);
 			    	if($href!=false){
-			    		if(!in_array($href,$response['links']))
+			    		if($istest){
+							$href=$a->href."    ===>   ".$href;
+						}
+			    		if(!in_array($href,$response['links'])){
 			    			$response['links'][]=$href;
+			    		}
 			    	}
 			    }
 				$htmldom->clear();
@@ -250,7 +261,7 @@ class UrlAnalyzer{
 		else{
 			return false;
 		}
-		$baseurl=ltrim($baseurl,$info['protocol']);
+		$baseurl=substr($baseurl,strlen($info['protocol']));
 
 		//获取url中的参数
 		$argpos=strpos($baseurl,"?");
@@ -328,13 +339,17 @@ class UrlAnalyzer{
 			return false;
 		}
 
-		//以协议开头的直接使用，以'/'开头的使用绝对路径，其他情况使用相对路径
+		//以协议开头的直接使用，以'//'开头的继承父链接协议，以'/'开头的使用绝对路径，其他情况使用相对路径
 		if(Util::strStartWith($href,'http://') || Util::strStartWith($href,'https://')) {
 			$url=self::urlSplit($href);
 			if($url==false){
 				return false;
 			}
 			return $url['protocol'].$url['host'].$url['path'].$url['file'].$url['args'];
+		}
+		elseif(Util::strStartWith($href,'//')) {
+			$href=ltrim($href,'//');
+			return $baseurl['protocol'].$href;
 		}
 		elseif(Util::strStartWith($href,'/')) {
 			return $baseurl['protocol'].$baseurl['host'].$href;

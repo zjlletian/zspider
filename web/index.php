@@ -1,7 +1,7 @@
 <?php
 	require_once(dirname(dirname(__FILE__)).'/Config.php');
-	TaskManager::connect();
-	$queueinfo=TaskManager::getQueueInfo();
+	QueueWatcher::connect();
+	$queueinfo=QueueWatcher::getQueueInfo();
 ?>
 
 <!DOCTYPE html>

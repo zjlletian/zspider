@@ -7,5 +7,5 @@ if(count($argv)!=2 || $argv[1]!='byscreen'){
 	exit();
 }
 
-//启动队列任务监视，将超时的task重新加入队列中
-TaskManager::srartQueueWatcher();
+//启动队列任务监视
+QueueWatcher::srartQueueWatcher();

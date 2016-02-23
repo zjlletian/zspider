@@ -29,13 +29,13 @@ else{
 date_default_timezone_set('Asia/Shanghai');
 
 
-//--------------------------------- 爬虫相关规则配置 --------------------------------------
-
-//最大网页大小 2M
-$GLOBALS['MAX_HTMLSISE']=1024*2048;
+//--------------------------------- 爬虫处理规则配置 --------------------------------------
 
 //最大并行任务数量
 $GLOBALS['MAX_PARALLEL']=30;
+
+//最大网页大小(B)
+$GLOBALS['MAX_HTMLSISE']=1024*2048;
 
 //不进行追踪的href (完全匹配以下字段)
 $GLOBALS['NOTTRACE_MATCH'] = array(
@@ -56,8 +56,13 @@ $GLOBALS['NOTTRACE_HAS'] = array(
 	'login',
 	'logout',
 	'passport',
-	'/search'
+	'/search',
+	'www.baidu.com',
+	'www.sogou.com',
+	'www.so.com'
 );
+
+//--------------------------------- 任务队列规则配置 --------------------------------------
 
 //默认更新周期
 $GLOBALS['UPDATE_TIME'] = array(
@@ -82,6 +87,9 @@ $GLOBALS['NOTUPDATE_HAS'] = array(
 
 //默认起点站点
 $GLOBALS['DEFAULT_SITE'] = array(
-	'2'=>array('https://www.baidu.com/','http://www.ifeng.com/'),
-	'3'=>array('http://www.163.com/','http://www.sina.com.cn/','http://baike.baidu.com/')
+	array('url'=>'https://www.baidu.com/','level'=>2),
+	array('url'=>'http://baike.baidu.com/','level'=>2),
+	array('url'=>'http://www.ifeng.com/','level'=>2),
+	array('url'=>'http://www.163.com/','level'=>2),
+	array('url'=>'http://www.sina.com.cn/','level'=>2)
 );
