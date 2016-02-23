@@ -87,7 +87,7 @@ $GLOBALS['NOTUPDATE_HAS'] = array(
 
 //默认起点站点
 $GLOBALS['DEFAULT_SITE'] = array(
-	array('url'=>'https://www.baidu.com/','level'=>2),
+	array('url'=>'https://www.baidu.com/','level'=>1),
 	array('url'=>'http://baike.baidu.com/','level'=>2),
 	array('url'=>'http://www.ifeng.com/','level'=>2),
 	array('url'=>'http://www.163.com/','level'=>2),

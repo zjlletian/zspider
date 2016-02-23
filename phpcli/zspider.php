@@ -9,25 +9,30 @@ if(count($argv)!=2 || $argv[1]!='byscreen'){
 
 //检查网络是否连接，如果网络中断则停止运行
 if(Util::isNetError()){
-	Util::echoRed("Network is error.\n");
+	Util::putErrorLog("Start failed, network error.\r\n");
 	exit();
 }
 
-echo "Create progress for TaskHandler...\n";
+Util::echoYellow("[".date("Y-m-d H:i:s")."] Create progress for TaskHandler...\n");
+Util::putErrorLog("---------------------- Create progress for TaskHandler -----------------------");
 
 //批量创建爬虫进程
-$pids=array();
 for($count=1; $count<=$GLOBALS['MAX_PARALLEL']; $count++){
-	$pid=TaskHandler::createProgress();
-	$pids[]=$pid;
+	TaskHandler::createProgress();
 }
-Util::echoGreen("Create TaskHandler done, running TaskHandler progress:".count($pids)."\n");
+Util::echoGreen("[".date("Y-m-d H:i:s")."] Create TaskHandler done, running TaskHandler progress:".$GLOBALS['MAX_PARALLEL']."\n\n");
+Util::putErrorLog("Create TaskHandler done, running TaskHandler progress:".$GLOBALS['MAX_PARALLEL']."\r\n");
 
 //检测子进程退出状态
-for($count=1; $count<count($pids); $count++){
+for($count=1; $count<$GLOBALS['MAX_PARALLEL']; $count++){
 	pcntl_wait($status);
-	Util::echoRed("One of TaskHandler exit, remaining TaskHandler progress:".(count($pids)-$count)."\n");
+	Util::echoRed("[".date("Y-m-d H:i:s")."] One TaskHandler stoped. running TaskHandler progress:".($GLOBALS['MAX_PARALLEL']-$count)."\n");
+	if(!Util::isNetError()){
+		TaskHandler::createProgress();
+		$count--;
+		Util::echoYellow("[".date("Y-m-d H:i:s")."] Restart a TaskHandler. running TaskHandler progress:".($GLOBALS['MAX_PARALLEL']-$count)."\n\n");
+	}
 }
 
-Util::echoRed("All TaskHandler progress exit.\n");
+Util::echoRed("[".date("Y-m-d H:i:s")."] All TaskHandler progress exit.\n");
 Util::putErrorLog("---------------------- All TaskHandler progress exit -----------------------\r\n\r\n");

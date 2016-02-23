@@ -6,18 +6,27 @@ function fatalErrorHandler(){
 	$types=array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR);
 	$e = error_get_last();
 	if(in_array($e['type'],$types)){
-		$str="TaskHandler stop. message:".$e['message']." file:".$e['file']."(".$e['line'].")";
+		$str="TaskHandler stop on dealing with url:".TaskHandler::$dealingTask['url'];
+		Util::putErrorLog($str);
+		$str="Message:".$e['message'];
+		Util::putErrorLog($str);
+		$str="File:".$e['file']."(".$e['line'].")\r\n";
+		Util::putErrorLog($str);
+		Util::echoRed("[".date("Y-m-d H:i:s")."] Fatal Error on dealing with ".TaskHandler::$dealingTask['url']."\n");
 	}
-	Util::putErrorLog($str);
 }
 
 class TaskHandler {
+
+	//正在处理的任务
+	static $dealingTask;
 
 	//创建爬虫子进程
 	static function createProgress() {
 		$pid = pcntl_fork();
 		if(!$pid) {
 			register_shutdown_function('fatalErrorHandler');
+			error_reporting(0);
 			self::runTask();
 		}
 		else{
@@ -37,6 +46,7 @@ class TaskHandler {
 		while(true){
 		    $task=TaskManager::getTask();
 			if($task!=null){
+				self::$dealingTask=$task;
 				self::handleTask($task);
 			}
 			else{
@@ -53,8 +63,11 @@ class TaskHandler {
 		//如果返回状态为0，则检查网络
 		if($urlinfo['code']==0){
 			if(Util::isNetError()){
-				Util::echoRed("Network is error.\n");
-				Util::putErrorLog("TaskHandler stop. Network is error.");
+				$str="TaskHandler stop on dealing with url: ".self::$dealingTask['url'];
+				Util::putErrorLog($str);
+				$str="Message:Network is error.\r\n";
+				Util::putErrorLog($str);
+				Util::echoRed("[".date("Y-m-d H:i:s")."] Network Error on dealing with ".TaskHandler::$dealingTask['url']."\n");
 				exit();
 			}
 		}

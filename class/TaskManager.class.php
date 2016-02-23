@@ -4,13 +4,11 @@ require_once(dirname(dirname(__FILE__)).'/Config.php');
 class TaskManager {
 
 	//mysql连接
-	static private $mysqli;
+	private static $mysqli;
 
 	//连接到Mysql,如果是cli模式则建立持久连接，如果是web模式则建立短连接
 	static function connect(){
-		if(php_sapi_name()=='cli'){
-			$GLOBALS['MYSQL']['host']="p:".$GLOBALS['MYSQL']['host'];
-		}
+		$host=php_sapi_name()=='cli'? $GLOBALS['MYSQL']['host'] : "p:".$GLOBALS['MYSQL']['host'];
 		self::$mysqli=new mysqli();
 		self::$mysqli->connect($GLOBALS['MYSQL']['host'],$GLOBALS['MYSQL']['user'],$GLOBALS['MYSQL']['passwd'],$GLOBALS['MYSQL']['db'],$GLOBALS['MYSQL']['port']);
 		if(self::$mysqli->connect_error!=null){
@@ -31,7 +29,12 @@ class TaskManager {
 			//任务超时时间，若没有响应则重新添加任务到队列中
 			$url =self::$mysqli->escape_string($task['url']);
 			$acktime=time()+120;
-			self::$mysqli->query("insert into onprocess values(null,'".$url."',".$task['level'].",".$task['time'].",".$task['type'].",".$acktime.")");
+			if(self::$mysqli->query("select * from onprocess where url='".$url."' limit 1")->num_rows==0){
+				self::$mysqli->query("insert into onprocess values(null,'".$url."',".$task['level'].",".$task['time'].",".$task['type'].",".$acktime.",1,1)");
+			}
+			else{
+				self::$mysqli->query("update onprocess set status=1, times=times+1, acktime=".$acktime." where url='".$url."' limit 1");
+			}
 			$task['id']=self::$mysqli->insert_id;
 		}
 		//如果获取到任务并且事务提交成功，则返回任务
@@ -57,12 +60,21 @@ class TaskManager {
 		//从正在执行的任务中移除
 		self::$mysqli->query("delete from onprocess where id=".$task['id']);
 		self::$mysqli->commit();
-
+		$url =self::$mysqli->escape_string($task['url']);
 		//当level>0时，尝试将连接加入爬虫任务队列
 		if(!isset($urlinfo['error'])){
 			if($urlinfo['level']>0 && count($urlinfo['links'])>0){
 				self::addNewTasks($urlinfo['links'],$urlinfo['level']-1);
 			}
+		}
+		else if($urlinfo['code']==600){
+			self::$mysqli->query("replace into errortask values(null,'".$url."',".(time()+3600*24*30).")"); //错误连接，30天后清理
+		}
+		else if($urlinfo['code']==0){
+			self::$mysqli->query("replace into errortask values(null,'".$url."',".(time()+3600*24*80).")"); //错误连接，80天后清理
+		}
+		else{
+			self::$mysqli->query("replace into errortask values(null,'".$url."',".(time()+3600*24*50).")"); //错误连接，50天后清理
 		}
 	}
 
@@ -116,9 +128,13 @@ class TaskManager {
 		if(self::$mysqli->query("select * from notupdate where url='".$url."' limit 1")->num_rows>0){
 			return -1;
 		}
-		//直接忽略正在处理的链接
+		//忽略正在处理的链接
 		if(self::$mysqli->query("select * from onprocess where url='".$url."' limit 1")->num_rows>0){
 			return -1;
+		}
+		//忽略标记为错误的链接
+		if(self::$mysqli->query("select * from errortask where url='".$url."' limit 1")->num_rows>0){
+			return ;
 		}
 
 		//判断是否存在于队列中
