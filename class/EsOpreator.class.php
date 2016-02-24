@@ -72,20 +72,16 @@ class EsOpreator{
 	                    ],
 	                    'type' => [
 	                        'type' => 'string'
+	                    ],
+	                    'spider' => [
+	                        'type' => 'string'
 	                    ]
 	                ]
 	            ],
-	            'cancel' => [
+	            'error' => [
 					'properties' => [
-						'message' => [
+						'error' => [
 							'type' => 'string'
-						]
-					]
-				],
-				'error' => [
-					'properties' => [
-						'code' => [
-							'type' => 'long'
 						]
 					]
 				]

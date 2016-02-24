@@ -37,14 +37,6 @@ class QueueWatcher {
 			self::handleAck();
 		}
 
-		//启动转储新链接的进程
-		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create NewLinks Watcher...\n");
-		$pid = pcntl_fork();
-		if(!$pid) {
-			self::connect();
-			self::handleNewLinks();
-		}
-
 		//启动删除过期错误的进程
 		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create ErrorLinks Watcher...\n\n");
 		$pid = pcntl_fork();
@@ -85,21 +77,6 @@ class QueueWatcher {
 		}
 	}
 
-	//处理新链接，将符合的新链接加入队列中
-	private static function handleNewLinks(){
-		while (true) {
-			$link=mysqli_fetch_assoc(self::$mysqli->query("select * from newlinks limit 1"));
-			if($link!=null){
-				self::addLinkToQueue($link);
-				//从新链接列表中删除
-				self::$mysqli->query("delete from newlinks where id=".$link['id']." limit 1");
-			}
-			else{
-				sleep(2); //延迟2秒
-			}
-		}
-	}
-
 	//添加连接到队列中
 	private static function addLinkToQueue($link){
 		$level=$link['level'];
@@ -117,7 +94,6 @@ class QueueWatcher {
 		if(self::$mysqli->query("select * from errortask where url='".$url."' limit 1")->num_rows>0){
 			return ;
 		}
-
 		//若不存在队列中，则加入新任务。若存在level大于队列中的level，则更新队列中的level
 		self::$mysqli->begin_transaction();
 		if(!self::$mysqli->query("insert into taskqueue values(null,'".$url."',".$level.",".time().",0)")){
@@ -139,7 +115,7 @@ class QueueWatcher {
 
 	//获取队列信息(for web)
 	static function getQueueInfo(){
-		$queueinfo=array('onprocess'=>array());
+		$queueinfo=array('onprocess'=>array(),'spiders'=>array());
 
 		//等待爬取的新网页数量
 		$queueinfo['new_task']=mysqli_fetch_assoc(self::$mysqli->query("select count(*) as count from taskqueue where type=0"))['count'];
@@ -151,6 +127,13 @@ class QueueWatcher {
 		$result=self::$mysqli->query("select * from onprocess where status=1 order by acktime");
 		while($task=mysqli_fetch_assoc($result)){
 			$queueinfo['onprocess'][]=$task;
+		}
+		$result->free();
+
+		//正在执行的任务
+		$result=self::$mysqli->query("select spider,count(*) as tasks from onprocess where status=1 group by spider");
+		while($task=mysqli_fetch_assoc($result)){
+			$queueinfo['spiders'][]=$task;
 		}
 		$result->free();
 		return $queueinfo;

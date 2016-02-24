@@ -84,7 +84,6 @@ class TaskHandler {
 
 		//提交任务执行结果
 		TaskManager::submitTask($task,$urlinfo);
-		set_time_limit(0);
 		
 		//记录任务日志
 		$log['url'] = empty($urlinfo['url'])?$task['url']:$urlinfo['url'];
@@ -96,7 +95,7 @@ class TaskHandler {
 		}
 		elseif($urlinfo['code']==600){
 			$log['level']=$task['level'];
-			$log['message']=$urlinfo['error'];
+			$log['error']=$urlinfo['error'];
 			$logtype="error";
 		}
 		EsOpreator::putLog($log,$logtype);

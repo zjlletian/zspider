@@ -19,7 +19,7 @@ class Util{
     	if(!file_exists($errorfile)){
     		touch($errorfile);
     	}
-    	$str ='['.date('Y-m-d h-i-s').'] '.$log."\r\n";
+    	$str ='['.date("Y-m-d H:i:s").'] '.$log."\r\n";
 		file_put_contents($errorfile, $str, FILE_APPEND);
 	}
 

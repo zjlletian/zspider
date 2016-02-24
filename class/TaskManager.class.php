@@ -51,24 +51,25 @@ class TaskManager {
 		return null;
 	}
 
-	//提交任务执行结果，返回更新时间字符串
+	//提交任务执行结果
 	static function submitTask($task,$urlinfo){
 
-		$url=empty($urlinfo['url'])?$task['url']:$urlinfo['url'];
-		
-		self::$mysqli->begin_transaction();
 		//对执行结果分配更新任务
 		if(!isset($urlinfo['error'])){
 			self::addUpdateTask($urlinfo['url'],$urlinfo['level']);
 		}
 		//从正在执行的任务中移除
 		self::$mysqli->query("delete from onprocess where id=".$task['id']);
-		self::$mysqli->commit();
+
+		//解除任务定时
+		set_time_limit(0);
 		
 		//当level>0时，将连接加入队列，否则记录错误
 		if(!isset($urlinfo['error'])){
 			if($urlinfo['level']>0 && count($urlinfo['links'])>0){
-				self::addNewLinks($urlinfo['links'],$urlinfo['level']-1);
+				foreach ($urlinfo['links'] as $url) {
+					self::addLinkToQueue($url,$urlinfo['level']-1);
+				}
 			}
 		}
 		else{
@@ -91,16 +92,27 @@ class TaskManager {
 		}
 	}
 
-	//批量增加实时任务
-	private static function addNewLinks($urls,$level){
-		foreach ($urls as $url) {
-			$url=self::$mysqli->escape_string($url);
-			if(!self::$mysqli->query("insert into newlinks values(null,'".$url."',".$level.")")){
-				//如果插入失败,比较level
-				$link = mysqli_fetch_assoc(self::$mysqli->query("select * from newlinks where url='".$url."' limit 1"));
-				if($link!=null && $link['level']<$level){
-					self::$mysqli->query("update newlinks set level=".$level." where id=".$link['id']." limit 1");
-				}
+	//添加连接到队列中
+	private static function addLinkToQueue($url,$level){
+		$url=self::$mysqli->escape_string($url);
+
+		//忽略存在于不更新列表中的链接
+		if(self::$mysqli->query("select * from notupdate where url='".$url."' limit 1")->num_rows>0){
+			return ;
+		}
+		//忽略正在处理的链接
+		if(self::$mysqli->query("select * from onprocess where url='".$url."' limit 1")->num_rows>0){
+			return ;
+		}
+		//忽略标记为错误的链接
+		if(self::$mysqli->query("select * from errortask where url='".$url."' limit 1")->num_rows>0){
+			return ;
+		}
+		//若不存在队列中，则加入新任务。若存在level大于队列中的level，则更新队列中的level
+		if(!self::$mysqli->query("insert into taskqueue values(null,'".$url."',".$level.",".time().",0)")){
+			$task = mysqli_fetch_assoc(self::$mysqli->query("select * from taskqueue where url='".$url."' limit 1"));
+			if($task!=null && $task['level']<$level){
+				self::$mysqli->query("update taskqueue set level=".$level." where id=".$task['id']." limit 1");
 			}
 		}
 	}
