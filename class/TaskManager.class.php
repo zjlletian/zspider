@@ -6,9 +6,9 @@ class TaskManager {
 	//mysql连接
 	private static $mysqli;
 
-	//连接到Mysql,如果是cli模式则建立持久连接，如果是web模式则建立短连接
-	static function connect(){
-		$host=php_sapi_name()=='cli'? $GLOBALS['MYSQL']['host'] : "p:".$GLOBALS['MYSQL']['host'];
+	//连接到Mysql,如果是$ispcon为true模式则建立持久连接，否则建立短连接
+	static function connect($ispcon=true){
+		$host=$ispcon? "p:".$GLOBALS['MYSQL']['host'] : $GLOBALS['MYSQL']['host'];
 		self::$mysqli=new mysqli();
 		self::$mysqli->connect($GLOBALS['MYSQL']['host'],$GLOBALS['MYSQL']['user'],$GLOBALS['MYSQL']['passwd'],$GLOBALS['MYSQL']['db'],$GLOBALS['MYSQL']['port']);
 		if(self::$mysqli->connect_error!=null){
@@ -19,33 +19,36 @@ class TaskManager {
 
 	//获取一个到达处理时间的爬虫任务，$time:提前时间
 	static function getTask($time=0){
-		//时间升序排列形成广度优先遍历，深度越深队列数据量越大,查询速度变慢，时间降序排列会形成深度优先遍历，刚加进来的新任务就会被马上处理，但老任务会积压
+
+		//获取处理超时需要重新处理的任务
 		self::$mysqli->begin_transaction();
-		$result = self::$mysqli->query("select * from taskqueue where time<=".(time()-$time)." order by time limit 1");
-		$task=mysqli_fetch_assoc($result);
-		if($result->num_rows!=0){
-			//删除任务
+		$task =mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where status=0 limit 1"));
+		if($task!=null && $task['times']<4){
+			//标记为正在处理
+			self::$mysqli->query("update onprocess set status=1, times=times+1, acktime=".time()." where id=".$task['id']." limit 1");
+
+			//如果获取到任务并且事务提交成功，则返回任务
+			if(self::$mysqli->commit()){
+				return $task;
+			}
+		}
+
+		//从任务队列中获取任务（时间升序排列：广度优先遍历，深度越深队列数据量越大,查询速度变慢。时间降序排列：深度优先遍历，新任务马上处理，老任务积压）
+		self::$mysqli->begin_transaction();
+		$task =mysqli_fetch_assoc(self::$mysqli->query("select * from taskqueue where time<=".(time()-$time)." order by time limit 1"));
+		if($task!=null){
+			$url=self::$mysqli->escape_string($task['url']);
+			//从队列中删除任务
 			self::$mysqli->query("delete from taskqueue where id=".$task['id']." limit 1");
-			//任务超时时间，若没有响应则重新添加任务到队列中
-			$url =self::$mysqli->escape_string($task['url']);
-			$acktime=time()+120;
-			if(self::$mysqli->query("select * from onprocess where url='".$url."' limit 1")->num_rows==0){
-				self::$mysqli->query("insert into onprocess values(null,'".$url."',".$task['level'].",".$task['time'].",".$task['type'].",".$acktime.",1,1)");
-			}
-			else{
-				self::$mysqli->query("update onprocess set status=1, times=times+1, acktime=".$acktime." where url='".$url."' limit 1");
-			}
+			//标记为正在处理
+			self::$mysqli->query("insert into onprocess values(null,'".$url."',".$task['level'].",".$task['time'].",".$task['type'].",".time().",1,1)");
 			$task['id']=self::$mysqli->insert_id;
+			//如果获取到任务并且事务提交成功，则返回任务
+			if(self::$mysqli->commit()){
+				return $task;
+			}
 		}
-		//如果获取到任务并且事务提交成功，则返回任务
-		if(self::$mysqli->commit() && $result->num_rows!=0){
-			$result->free();
-			return $task;
-		}
-		else{
-			$result->free();
-			return null;
-		}
+		return null;
 	}
 
 	//提交任务执行结果，返回更新时间字符串
@@ -60,8 +63,9 @@ class TaskManager {
 		//从正在执行的任务中移除
 		self::$mysqli->query("delete from onprocess where id=".$task['id']);
 		self::$mysqli->commit();
+		
+		//当level>0时，将连接加入队列，否则记录错误
 		$url =self::$mysqli->escape_string($task['url']);
-		//当level>0时，尝试将连接加入爬虫任务队列
 		if(!isset($urlinfo['error'])){
 			if($urlinfo['level']>0 && count($urlinfo['links'])>0){
 				self::addNewTasks($urlinfo['links'],$urlinfo['level']-1);
@@ -115,7 +119,7 @@ class TaskManager {
 				$updatetime=time()+$GLOBALS['SITE_UPDATE'][$urlbak]['time'];
 			}
 		}
-		self::$mysqli->query("insert into taskqueue values(null,'".$url."',".$level.",".$updatetime.",1)");
+		self::$mysqli->query("insert ignore into taskqueue values(null,'".$url."',".$level.",".$updatetime.",1)");
 		self::$mysqli->commit();
 		return date("Y-m-d H:i:s",$updatetime);
 	}

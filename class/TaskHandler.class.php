@@ -13,6 +13,7 @@ function fatalErrorHandler(){
 		$str="File:".$e['file']."(".$e['line'].")\r\n";
 		Util::putErrorLog($str);
 		Util::echoRed("[".date("Y-m-d H:i:s")."] Fatal Error on dealing with ".TaskHandler::$dealingTask['url']."\n");
+		Util::echoRed("[".date("Y-m-d H:i:s")."] Error Message:".$e['message']."\n");
 	}
 }
 
@@ -57,6 +58,10 @@ class TaskHandler {
 
 	//执行爬虫任务
 	private static function handleTask($task){
+
+		//设置单任务最大执行时间
+		set_time_limit(120);
+
 		//解析URL信息
 		$urlinfo=UrlAnalyzer::getInfo($task['url'],$task['level']);
 
@@ -79,7 +84,8 @@ class TaskHandler {
 
 		//提交任务执行结果
 		TaskManager::submitTask($task,$urlinfo);
-
+		set_time_limit(0);
+		
 		//记录任务日志
 		if(!isset($urlinfo['error'])){
 			$log['url']=$urlinfo['url'];

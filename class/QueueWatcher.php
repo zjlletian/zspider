@@ -6,9 +6,9 @@ class QueueWatcher {
 	//mysql连接
 	private static $mysqli;
 
-	//连接到Mysql,如果是cli模式则建立持久连接，如果是web模式则建立短连接
-	static function connect(){
-		$host=php_sapi_name()=='cli'? $GLOBALS['MYSQL']['host'] : "p:".$GLOBALS['MYSQL']['host'];
+	//连接到Mysql,如果是$ispcon为true模式则建立持久连接，否则建立短连接
+	static function connect($ispcon=true){
+		$host=$ispcon? "p:".$GLOBALS['MYSQL']['host'] : $GLOBALS['MYSQL']['host'];
 		self::$mysqli=new mysqli();
 		self::$mysqli->connect($GLOBALS['MYSQL']['host'],$GLOBALS['MYSQL']['user'],$GLOBALS['MYSQL']['passwd'],$GLOBALS['MYSQL']['db'],$GLOBALS['MYSQL']['port']);
 		if(self::$mysqli->connect_error!=null){
@@ -28,13 +28,7 @@ class QueueWatcher {
 		foreach ($GLOBALS['DEFAULT_SITE'] as $link) {
 			self::addNewLink($link);
 		}
-		//启动监视ack的进程
-		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create Ack Watcher...\n");
-		$pid = pcntl_fork();
-		if(!$pid) {
-			self::connect();
-			self::handleAck();
-		}
+
 		//启动转储新链接的进程
 		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create NewLinks Watcher...\n");
 		$pid = pcntl_fork();
@@ -42,6 +36,15 @@ class QueueWatcher {
 			self::connect();
 			self::handleNewLinks();
 		}
+
+		//启动监视ack的进程
+		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create Ack Watcher...\n");
+		$pid = pcntl_fork();
+		if(!$pid) {
+			self::connect();
+			self::handleAck();
+		}
+
 		//启动删除过期错误的进程
 		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create ErrorLinks Watcher...\n\n");
 		$pid = pcntl_fork();
@@ -49,8 +52,7 @@ class QueueWatcher {
 			self::connect();
 			self::handleErrorLinks();
 		}
-		pcntl_wait($status);
-		pcntl_wait($status);
+
 		pcntl_wait($status);
 		Util::echoRed("[".date("Y-m-d H:i:s")."] QueueWatcher stoped..");
 	}
@@ -58,10 +60,10 @@ class QueueWatcher {
 	//处理ack，将超时的task重新加入队列中
 	private static function handleAck(){
 		while(true) {
-			$task =mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where status=1 and acktime<=".time()." limit 1"));
+			$task =mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where status=1 and acktime<=".(time()-200)." limit 1")); //处理200秒之前开始的任务(单任务最大执行时间为120秒)
 			if($task!=null){
-				$url =self::$mysqli->escape_string($task['url']);
-				
+				$url = self::$mysqli->escape_string($task['url']);
+				//将执行次数小于4次的标记为需要重新处理，否则丢弃任务。
 				self::$mysqli->begin_transaction();
 				if($task['times']>=4){
 					Util::echoRed("[".date("Y-m-d H:i:s")."] Ack out of time ".$task['times']." times, task abandon.\n");
@@ -72,8 +74,7 @@ class QueueWatcher {
 				else{
 					Util::echoYellow("[".date("Y-m-d H:i:s")."] Ack out of time ".$task['times']." times, task retry.\n");
 					Util::echoYellow("Type:".$task['type']." Level:".$task['level']." Url:".$url."\n\n");
-					self::$mysqli->query("update onprocess set status=0 where url='".$url."' limit 1");
-					self::$mysqli->query("insert ignore into taskqueue values(null,'".$url."',".$task['level'].",".$task['time'].",".$task['type'].")");
+					self::$mysqli->query("update onprocess set status=0 where id=".$task['id']." limit 1");
 				}
 				self::$mysqli->commit();
 			}
@@ -149,7 +150,7 @@ class QueueWatcher {
 		$queueinfo['update_task']=mysqli_fetch_assoc(self::$mysqli->query("select count(*) as count from taskqueue where type=1 and time<=".time()))['count'];
 
 		//正在执行的任务
-		$result=self::$mysqli->query("select * from onprocess where acktime>".time());
+		$result=self::$mysqli->query("select * from onprocess where status=1 order by acktime");
 		while($task=mysqli_fetch_assoc($result)){
 			$queueinfo['onprocess'][]=$task;
 		}
