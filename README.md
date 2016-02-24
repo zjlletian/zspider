@@ -1,4 +1,4 @@
-ZSpider分布式网站爬虫  开发日志 verison 6.1.0
+ZSpider分布式网站爬虫  开发日志 verison 6.1.1
 
 --------------------- 运行前提 ---------------------
 
@@ -27,9 +27,15 @@ ZSpider分布式网站爬虫  开发日志 verison 6.1.0
 将simple_html_dom替换成效率更高的解析器。
 
 
---------------------- 2016-2-24 version 6.1.0 ---------------------
+--------------------- 2016-2-24 version 6.1.1 ---------------------
 
 1.优化ACK处理，加入单个任务超时限制。
+
+2.优化错误类型处理。
+
+3.优化newlinks快慢表的处理。
+
+4.修复字符集编码识别的错误。
 
 
 --------------------- 2016-2-24 version 6.0.2 ---------------------
@@ -98,7 +104,7 @@ ZSpider分布式网站爬虫  开发日志 verison 6.1.0
 
 --------------------- 2016-2-17 version 1.3.0 ---------------------
 
-1.将原来TaskManager中的addNewTask,saveUrlInfo,addUpdateTask,ackTask合并成为submitTask，减少Spider调用与TaskManager的次数。
+1.将原来TaskManager中的addNewTask,saveUrlInfo,addUpdateTask,ackTask合并成为submitTask，减少Spider调用TaskManager的次数。
 
 2.使用config来配置默认起始站点。
 

@@ -20,20 +20,19 @@ class TaskManager {
 	//获取一个到达处理时间的爬虫任务，$time:提前时间
 	static function getTask($time=0){
 
-		//获取处理超时需要重新处理的任务
+		//获取一个处理超时需要重新处理的任务
 		self::$mysqli->begin_transaction();
 		$task =mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where status=0 limit 1"));
 		if($task!=null && $task['times']<4){
 			//标记为正在处理
-			self::$mysqli->query("update onprocess set status=1, times=times+1, acktime=".time()." where id=".$task['id']." limit 1");
-
-			//如果获取到任务并且事务提交成功，则返回任务
-			if(self::$mysqli->commit()){
-				return $task;
-			}
+			self::$mysqli->query("update onprocess set status=1, times=times+1, acktime=".time().", spider='".$GLOBALS['SPIDERNAME']."' where id=".$task['id']." limit 1");
+		}
+		//如果获取到任务并且事务提交成功，则返回任务
+		if(self::$mysqli->commit() && $task!=null && $task['times']<4){
+			return $task;
 		}
 
-		//从任务队列中获取任务（时间升序排列：广度优先遍历，深度越深队列数据量越大,查询速度变慢。时间降序排列：深度优先遍历，新任务马上处理，老任务积压）
+		//从任务队列中获取任务（时间升序：广度优先遍历，深度越深队列数据量越大,查询速度变慢。时间降序：深度优先遍历，新任务马上处理，老任务积压）
 		self::$mysqli->begin_transaction();
 		$task =mysqli_fetch_assoc(self::$mysqli->query("select * from taskqueue where time<=".(time()-$time)." order by time limit 1"));
 		if($task!=null){
@@ -41,18 +40,20 @@ class TaskManager {
 			//从队列中删除任务
 			self::$mysqli->query("delete from taskqueue where id=".$task['id']." limit 1");
 			//标记为正在处理
-			self::$mysqli->query("insert into onprocess values(null,'".$url."',".$task['level'].",".$task['time'].",".$task['type'].",".time().",1,1)");
+			self::$mysqli->query("insert into onprocess values(null,'".$url."',".$task['level'].",".$task['time'].",".$task['type'].",".time().",1,1,'".$GLOBALS['SPIDERNAME']."')");
 			$task['id']=self::$mysqli->insert_id;
-			//如果获取到任务并且事务提交成功，则返回任务
-			if(self::$mysqli->commit()){
-				return $task;
-			}
+			$task['spider']=$GLOBALS['SPIDERNAME'];
+		}
+		//如果获取到任务并且事务提交成功，则返回任务
+		if(self::$mysqli->commit() && $task!=null){
+			return $task;
 		}
 		return null;
 	}
 
 	//提交任务执行结果，返回更新时间字符串
 	static function submitTask($task,$urlinfo){
+
 		$url=empty($urlinfo['url'])?$task['url']:$urlinfo['url'];
 		
 		self::$mysqli->begin_transaction();
@@ -65,28 +66,42 @@ class TaskManager {
 		self::$mysqli->commit();
 		
 		//当level>0时，将连接加入队列，否则记录错误
-		$url =self::$mysqli->escape_string($task['url']);
 		if(!isset($urlinfo['error'])){
 			if($urlinfo['level']>0 && count($urlinfo['links'])>0){
-				self::addNewTasks($urlinfo['links'],$urlinfo['level']-1);
+				self::addNewLinks($urlinfo['links'],$urlinfo['level']-1);
 			}
 		}
-		else if($urlinfo['code']==600){
-			self::$mysqli->query("replace into errortask values(null,'".$url."',".(time()+3600*24*30).")"); //错误连接，30天后清理
-		}
-		else if($urlinfo['code']==0){
-			self::$mysqli->query("replace into errortask values(null,'".$url."',".(time()+3600*24*80).")"); //错误连接，80天后清理
-		}
 		else{
-			self::$mysqli->query("replace into errortask values(null,'".$url."',".(time()+3600*24*50).")"); //错误连接，50天后清理
+			$taskurl =self::$mysqli->escape_string($task['url']);
+			if($urlinfo['code']==0){
+				self::$mysqli->query("replace into errortask values(null,'".$taskurl."',".(time()+3600*24*100).")"); //连接错误，100天后清理
+			}
+			else if($urlinfo['code']<500){
+				self::$mysqli->query("replace into errortask values(null,'".$taskurl."',".(time()+3600*24*80).")"); //http错误，80天后清理
+			}
+			else if(500<=$urlinfo['code'] && $urlinfo['code']<600){
+				self::$mysqli->query("replace into errortask values(null,'".$taskurl."',".(time()+3600*24*50).")"); //服务器错误，50天后清理
+			}
+			else if(600<=$urlinfo['code'] && $urlinfo['code']<700){
+				self::$mysqli->query("replace into errortask values(null,'".$taskurl."',".(time()+3600*24*50).")"); //内容错误，50天后清理
+			}
+			else if($urlinfo['code']==800){
+				self::$mysqli->query("insert ignore into notupdate values(null,'".$taskurl."')"); //非html加入到notupdate
+			}
 		}
 	}
 
 	//批量增加实时任务
-	private static function addNewTasks($urls,$level){
+	private static function addNewLinks($urls,$level){
 		foreach ($urls as $url) {
 			$url=self::$mysqli->escape_string($url);
-			self::$mysqli->query("insert into newlinks values(null,'".$url."',".$level.")");
+			if(!self::$mysqli->query("insert into newlinks values(null,'".$url."',".$level.")")){
+				//如果插入失败,比较level
+				$link = mysqli_fetch_assoc(self::$mysqli->query("select * from newlinks where url='".$url."' limit 1"));
+				if($link!=null && $link['level']<$level){
+					self::$mysqli->query("update newlinks set level=".$level." where id=".$link['id']." limit 1");
+				}
+			}
 		}
 	}
 
@@ -128,24 +143,24 @@ class TaskManager {
 	static function isHandled($url,$level) {
 		$url=self::$mysqli->escape_string($url);
 
-		//忽略存在于不更新列表中的链接
-		if(self::$mysqli->query("select * from notupdate where url='".$url."' limit 1")->num_rows>0){
-			return -1;
-		}
 		//忽略正在处理的链接
 		if(self::$mysqli->query("select * from onprocess where url='".$url."' limit 1")->num_rows>0){
 			return -1;
 		}
+		//忽略存在于不更新列表中的链接
+		if(self::$mysqli->query("select * from notupdate where url='".$url."' limit 1")->num_rows>0){
+			return -2;
+		}
 		//忽略标记为错误的链接
 		if(self::$mysqli->query("select * from errortask where url='".$url."' limit 1")->num_rows>0){
-			return ;
+			return -3;
 		}
 
-		//判断是否存在于队列中
 		$result = self::$mysqli->query("select * from taskqueue where url='".$url."' limit 1");
 		$task=mysqli_fetch_assoc($result);
 		$result->free();
-		//如果不存在任务，标记为未处理。如果存在level较小的new任务，则删除任务，返回较大的level。如果存在level较小的update任务，则提升level
+
+		//判断是否存在于队列中,如果不存在任务，标记为未处理。如果存在level较小的new任务，则删除任务，返回较大的level。如果存在level较小的update任务，则提升level
 		if(!$task){
 			return $level;
 		}

@@ -10,7 +10,7 @@ Target Server Type    : MYSQL
 Target Server Version : 50629
 File Encoding         : 65001
 
-Date: 2016-02-24 02:57:08
+Date: 2016-02-24 23:17:50
 */
 
 SET FOREIGN_KEY_CHECKS=0;
@@ -27,7 +27,7 @@ CREATE TABLE `errortask` (
   UNIQUE KEY `url_unique` (`url`) USING BTREE,
   KEY `url_sort` (`url`) USING BTREE,
   KEY `time_sort` (`time`) USING BTREE
-) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Table structure for newlinks
@@ -38,7 +38,7 @@ CREATE TABLE `newlinks` (
   `url` varchar(255) NOT NULL,
   `level` int(11) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Table structure for notupdate
@@ -49,7 +49,7 @@ CREATE TABLE `notupdate` (
   `url` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `url_unique` (`url`) USING BTREE
-) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Table structure for onprocess
@@ -64,9 +64,10 @@ CREATE TABLE `onprocess` (
   `acktime` int(11) NOT NULL,
   `times` int(11) NOT NULL DEFAULT '1',
   `status` int(11) NOT NULL DEFAULT '0',
+  `spider` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `url_unique` (`url`)
-) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Table structure for taskqueue
@@ -82,4 +83,4 @@ CREATE TABLE `taskqueue` (
   UNIQUE KEY `url_unique` (`url`) USING BTREE,
   KEY `time_sort` (`time`) USING BTREE,
   KEY `type_sort` (`type`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;

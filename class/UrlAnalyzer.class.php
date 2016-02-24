@@ -8,7 +8,7 @@ class UrlAnalyzer{
 	static function getInfo($url,$level){
 		for($count=1; $count<=3; $count++){
 			$response=self::getInfoOnce($url,$level);
-			if(!isset($response['error']) || $response['code']==600 || $response['code']==700){
+			if(!isset($response['error']) || $response['code']>=600){
 				break;
 			}
 		}
@@ -44,7 +44,7 @@ class UrlAnalyzer{
 		curl_setopt($ch, CURLOPT_HTTPHEADER,$header);
 		unset($header);
 
-		$response = array();
+		$response = array('code'=>0);
 		$htmltext='';
 		try{
 			//执行请求，对重定向地址循环执行，最大重定向次数5
@@ -55,44 +55,47 @@ class UrlAnalyzer{
 				$response['code'] = $responseheader['http_code'];
 
 				//判断地址是否被重定向，没有重定向则退出循环.301重定向在curl中的code是200，要用$response['url']!=$url判断
-				$redirectcode=302;
 				if(intval($response['code']/100)==3 || $response['url']!=$url){
 					if(empty($responseheader['redirect_url'])){
-						$redirect_url=$response['url'];
+						$url=$response['url'];
 						$redirectcode=301;
-						if($istest){
-							Util::echoYellow("Redirect[301]: ".$redirect_url."\n");
-						}
 					}
 					else{
-						$redirect_url=$responseheader['redirect_url'];
+						$url=$responseheader['redirect_url'];
 						$redirectcode=302;
-						if($istest){
-							Util::echoYellow("Redirect[302]: ".$redirect_url."\n");
-						}
 					}
-					$url=$redirect_url;
+					if($istest){
+						Util::echoYellow("Redirect[".$redirectcode."]: ".$url."\n");
+					}
 
 					//检查重定向地址是否有效
-					if(!self::checkHref($redirect_url)){
-						$response['code'] = 600;
-						throw new Exception("redirect url was marked to not trace.");
+					if(!self::checkHref($url)){
+						$response['code'] = 700;
+						throw new Exception("redirect url is marked to not trace.");
 					}
 
 					//判断地址是否需要处理
 					if(!$istest){
-						$level=TaskManager::isHandled($redirect_url,$level);
+						$level=TaskManager::isHandled($url,$level);
 					}
 					if($level==-1){
-						$response['code'] = 600;
+						$response['code'] = 701;
 						throw new Exception("redirect url has been or is being handled.");
+					}
+					if($level==-2){
+						$response['code'] = 702;
+						throw new Exception("redirect url has been marked to be not update.");
+					}
+					if($level==-3){
+						$response['code'] = 703;
+						throw new Exception("redirect url has been marked to be error url.");
 					}
 
 					//如果是302需要以重定向地址重新获取，301不需要
 					if($redirectcode==301) {
 						break;
 					}
-					curl_setopt($ch, CURLOPT_URL, $redirect_url);
+					curl_setopt($ch, CURLOPT_URL, $url);
 				}
 				else {
 					break;
@@ -101,7 +104,7 @@ class UrlAnalyzer{
 
 			//判断是否重定向超过次数限制
 			if(intval($response['code']/100)==3 || $response['url']!=$url){
-				$response['code']=600;
+				$response['code']=302;
 				throw new Exception("too mach redirect.\n");
 			}
 
@@ -111,19 +114,19 @@ class UrlAnalyzer{
 				//判断文档类型是否为text/html
 				$contentType = strtr(strtoupper($responseheader['content_type']), array(' '=>'','\t'=>'','@'=>''));
 				if(strpos($contentType,'TEXT/HTML')===false){
-					$response['code'] = 600;
+					$response['code'] = 800;
 					throw new Exception("doctype is not html.");
 				}
 
 				//判断是否空内容
 				if(strlen($htmltext)==0){
-					$response['code'] = 100;
+					$response['code'] = 600;
 					throw new Exception("empty html");
 				}
 
 				//使用ContentType获取字符编码，若未检出，则使用编码检测函数检测方式获取
 				$charset ='';
-				$charsets=array("UTF-8","ISO-8859-1","GBK","GB2312");
+				$validcharsets=array("GB2312","GBK","UTF-8","ISO-8859-1");
 				foreach (explode(";",$contentType) as $ct) {
 					$ctkv=explode("=",$ct);
 					if(count($ctkv)==2 && $ctkv[0]=='CHARSET'){
@@ -131,8 +134,8 @@ class UrlAnalyzer{
 						break;
 					}
 				}
-				if(!in_array($charset,$charsets)){
-					$charset = mb_detect_encoding($htmltext, $charsets);
+				if(!in_array($charset,$validcharsets)){
+					$charset = mb_detect_encoding($htmltext,$validcharsets);
 				}
 				//如果未检测出字符编码则返回错误，否则字符集转换为UTF-8
 				if($charset ==''){
@@ -140,7 +143,7 @@ class UrlAnalyzer{
 		    		throw new Exception("unknown charset.");
 				}
 				elseif ($charset != "UTF-8"){
-					$htmltext = mb_convert_encoding($htmltext, 'UTF-8');
+					$htmltext = mb_convert_encoding($htmltext,'UTF-8',$charset);
 				}
 				$response['charset']= $charset;
 
@@ -198,10 +201,7 @@ class UrlAnalyzer{
 			}
 		}
 		catch(Exception $e) {
-			if($response['code']!=600){
-				if(!isset($response['code'])){
-					$response['code']=0;
-				}
+			if($response['code']<600){
 				$response['error']="error code=".$response['code'];
 			}
 			else{

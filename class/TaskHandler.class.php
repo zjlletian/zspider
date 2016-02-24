@@ -6,14 +6,14 @@ function fatalErrorHandler(){
 	$types=array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR);
 	$e = error_get_last();
 	if(in_array($e['type'],$types)){
-		$str="TaskHandler stop on dealing with url:".TaskHandler::$dealingTask['url'];
+		$str="TaskHandler stop on dealing with url: ".TaskHandler::$dealingTask['url'];
 		Util::putErrorLog($str);
-		$str="Message:".$e['message'];
+		$str="Message: ".$e['message'];
 		Util::putErrorLog($str);
-		$str="File:".$e['file']."(".$e['line'].")\r\n";
+		$str="File: ".$e['file']." (line ".$e['line'].")\r\n";
 		Util::putErrorLog($str);
 		Util::echoRed("[".date("Y-m-d H:i:s")."] Fatal Error on dealing with ".TaskHandler::$dealingTask['url']."\n");
-		Util::echoRed("[".date("Y-m-d H:i:s")."] Error Message:".$e['message']."\n");
+		Util::echoRed("[".date("Y-m-d H:i:s")."] Message: ".$e['message']."\n");
 	}
 }
 
@@ -70,7 +70,7 @@ class TaskHandler {
 			if(Util::isNetError()){
 				$str="TaskHandler stop on dealing with url: ".self::$dealingTask['url'];
 				Util::putErrorLog($str);
-				$str="Message:Network is error.\r\n";
+				$str="Message: Network is error.\r\n";
 				Util::putErrorLog($str);
 				Util::echoRed("[".date("Y-m-d H:i:s")."] Network Error on dealing with ".TaskHandler::$dealingTask['url']."\n");
 				exit();
@@ -87,24 +87,16 @@ class TaskHandler {
 		set_time_limit(0);
 		
 		//记录任务日志
+		$log['url'] = empty($urlinfo['url'])?$task['url']:$urlinfo['url'];
+		$log['type']=$task['type']==0? "New":"Update";
+		$log['spider']=$GLOBALS['SPIDERNAME'];
 		if(!isset($urlinfo['error'])){
-			$log['url']=$urlinfo['url'];
 			$log['level']=$urlinfo['level'];
-			$log['type']=$task['type']==0?"New":"Update";
-			$logtype="suc";
+			$logtype="success";
 		}
 		elseif($urlinfo['code']==600){
-			$log['url']=$task['url'];
 			$log['level']=$task['level'];
-			$log['type']=$task['type']==0?"New":"Update";
 			$log['message']=$urlinfo['error'];
-			$logtype="cancel";
-		}
-		else{
-			$log['url']=$task['url'];
-			$log['level']=$task['level'];
-			$log['type']=$task['type']==0?"New":"Update";
-			$log['code']=$urlinfo['code'];
 			$logtype="error";
 		}
 		EsOpreator::putLog($log,$logtype);

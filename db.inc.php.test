@@ -1,7 +1,7 @@
 <?php
 require_once(dirname(__FILE__).'/Config.php');
 
-//-------------------- 存储服务器配置 --------------------
+//--------------------------------- 存储服务器配置 --------------------------------------
 
 //Elasticsearch集群地址（多个master的地址）
 $GLOBALS['ELASTICSEARCH'] = array('http://localhost:9200');
@@ -14,3 +14,6 @@ $GLOBALS['MYSQL'] = array(
 	'user'=>'user',
 	'passwd'=>'passwd'
 );
+
+//Spider标识
+$GLOBALS['SPIDERNAME']='spidername';
