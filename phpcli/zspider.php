@@ -13,6 +13,12 @@ if(Util::isNetError()){
 	exit();
 }
 
+//报告爬虫状态
+$pid = pcntl_fork();
+if(!$pid) {
+	reportSpider();
+}
+
 Util::echoYellow("[".date("Y-m-d H:i:s")."] Create progress for TaskHandler...\n");
 Util::putErrorLog("---------------------- Create progress for TaskHandler -----------------------");
 
@@ -36,3 +42,18 @@ for($count=1; $count<$GLOBALS['MAX_PARALLEL']; $count++){
 
 Util::echoRed("[".date("Y-m-d H:i:s")."] All TaskHandler progress exit.\n");
 Util::putErrorLog("---------------------- All TaskHandler progress exit -----------------------\r\n\r\n");
+
+//向服务器报告在线状态
+function reportSpider(){
+	while(true){
+		$data = array ('name' =>$GLOBALS['SPIDERNAME']);
+		$ch = curl_init ();
+		curl_setopt ( $ch, CURLOPT_URL, $GLOBALS['REPORTADDR'] );
+		curl_setopt ( $ch, CURLOPT_POST, 1 );
+		curl_setopt ( $ch, CURLOPT_HEADER, 0 );
+		curl_setopt ( $ch, CURLOPT_RETURNTRANSFER, 1 );
+		curl_setopt ( $ch, CURLOPT_POSTFIELDS, $data );
+		$return = curl_exec ( $ch );
+		sleep(40);
+	}
+}

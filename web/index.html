@@ -26,9 +26,9 @@
 				<div class="col-md-12">
 					<h3>队列任务信息</h3>
 					<table class="table" id="queueinfo">
+						<tr><th>正在执行任务数量</th><td id="onprocess"></td></tr>
 						<tr><th>待爬取新网页数量</th><td id="newtask"></td></tr>
 						<tr><th>需要更新网页数量</th><td id="updatetask"></td></tr>
-						<tr><th>正在处理任务数量</th><td id="onprocess"></td></tr>
 					</table>
 				</div>
 			</div>
@@ -53,7 +53,7 @@
 <script type="text/javascript">
 
 //爬虫信息表格模版
-var spiderinfoh='<tr><th>标识</th> <th>IP</th> <th>执行中任务数量</th> </tr>';
+var spiderinfoh='<tr><th>机器标识</th> <th>IP</th> <th>执行中任务数量</th> </tr>';
 var spiderinfo='<tr><td>{$name}</td> <td>{$ip}</td> <td>{$tasks}</td> </tr>';
 
 //加载数据
@@ -65,17 +65,17 @@ function loadData(){
 		$('#onprocess').html(data.onprocess.length);
 
 		//在线爬虫机器
-		$('#spidercount').html('在线爬虫机器 : '+data.spiders.length);
+		$('#spidercount').html('在线爬虫列表 : '+data.spiders.length);
 		slist=spiderinfoh;
 		for(var i=0;i<data.spiders.length;i++){
-            slist+=spiderinfo.replace('{$name}',data.spiders[i].spider).replace('{$ip}',data.spiders[i].ip).replace('{$tasks}',data.spiders[i].tasks);
+            slist+=spiderinfo.replace('{$name}',data.spiders[i].name).replace('{$ip}',data.spiders[i].ip).replace('{$tasks}',data.spiders[i].tasks);
         }
 		$('#spiderlist').html(slist);
 
 		//处理中的任务
 		loadTasks(data.onprocess);
 	});
-	setTimeout("loadData();",1000);
+	setTimeout("loadData();",2000);
 }
 
 //加载任务数据
@@ -84,7 +84,7 @@ function loadTasks(tasks){
 	tlist='';
 	for(var i=0;i<tasks.length;i++){
         tlist+='<a href="'+tasks[i].url+'" target="_blank">'+(tasks[i].url.length>80?tasks[i].url.substr(0,80)+'....':tasks[i].url)+'</a>'+'<br>';
-		tlist+='处理次数：'+tasks[i].times+' 等级：'+tasks[i].level+'&nbsp;&nbsp;&nbsp;类型：'+(tasks[i].type==0?'New':'Update')+'<br>';
+		tlist+='等级：'+tasks[i].level+'&nbsp;&nbsp;&nbsp;类型：'+(tasks[i].type==0?'New':'Update')+'&nbsp;&nbsp;&nbsp;处理次数：'+tasks[i].times+'&nbsp;&nbsp;&nbsp;处理爬虫：'+tasks[i].spider+'<br>';
         tlist+='任务开始时间：'+tasks[i].acktime+'&nbsp;&nbsp;&nbsp;处理用时：'+tasks[i].cost+'秒<br>';
         tlist+='加入列队时间：'+tasks[i].time+'&nbsp;&nbsp;&nbsp;处理延迟：'+tasks[i].delay+'<br><br>';
     }

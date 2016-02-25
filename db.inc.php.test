@@ -17,3 +17,6 @@ $GLOBALS['MYSQL'] = array(
 
 //Spider标识
 $GLOBALS['SPIDERNAME']='spidername';
+
+//spider信息报告地址
+$GLOBALS['REPORTADDR']='http://spider.zhouvm.com/json/report';

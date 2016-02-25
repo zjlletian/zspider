@@ -29,7 +29,7 @@ class QueueWatcher {
 			self::addLinkToQueue($link);
 		}
 
-		//启动监视ack的进程
+		//启动监视ack进程
 		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create Ack Watcher...\n");
 		$pid = pcntl_fork();
 		if(!$pid) {
@@ -37,12 +37,22 @@ class QueueWatcher {
 			self::handleAck();
 		}
 
-		//启动删除过期错误的进程
-		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create ErrorLinks Watcher...\n\n");
+		//启动删除过期错误进程
+		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create ErrorLinks Watcher...\n");
 		$pid = pcntl_fork();
 		if(!$pid) {
 			self::connect();
 			self::cleanErrorLinks();
+		}
+
+		//启动新链接转储进程
+		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create NewLinks transporter...\n\n");
+		for($count=0;$count<10;$count++){
+			$pid = pcntl_fork();
+			if(!$pid) {
+				self::connect();
+				self::handleNewLinks($count*50);
+			}
 		}
 
 		pcntl_wait($status);
@@ -77,6 +87,23 @@ class QueueWatcher {
 		}
 	}
 
+	//处理新链接
+	private static function handleNewLinks($hash){
+		while(true) {
+			$result=self::$mysqli->query("select * from newlinks limit ".$hash.",5");
+			if($result->num_rows>0){
+				while($link=mysqli_fetch_assoc($result)){
+					self::addLinkToQueue($link);
+					self::$mysqli->query("delete from newlinks where id=".$link['id']." limit 1");
+				}
+				$result->free();
+			}
+			else{
+				usleep(500000);//500毫秒
+			}
+		}
+	}
+
 	//添加连接到队列中
 	private static function addLinkToQueue($link){
 		$level=$link['level'];
@@ -95,14 +122,12 @@ class QueueWatcher {
 			return ;
 		}
 		//若不存在队列中，则加入新任务。若存在level大于队列中的level，则更新队列中的level
-		self::$mysqli->begin_transaction();
 		if(!self::$mysqli->query("insert into taskqueue values(null,'".$url."',".$level.",".time().",0)")){
 			$task = mysqli_fetch_assoc(self::$mysqli->query("select * from taskqueue where url='".$url."' limit 1"));
 			if($task!=null && $task['level']<$level){
 				self::$mysqli->query("update taskqueue set level=".$level." where id=".$task['id']." limit 1");
 			}
 		}
-		self::$mysqli->commit();
 	}
 
 	//清除到达清理时间的错误连接，每10天执行一次
@@ -124,18 +149,35 @@ class QueueWatcher {
 		$queueinfo['update_task']=mysqli_fetch_assoc(self::$mysqli->query("select count(*) as count from taskqueue where type=1 and time<=".time()))['count'];
 
 		//正在执行的任务
-		$result=self::$mysqli->query("select * from onprocess where status=1 order by acktime");
+		$result=self::$mysqli->query("select * from onprocess where acktime>".(time()-120)." order by acktime");
 		while($task=mysqli_fetch_assoc($result)){
 			$queueinfo['onprocess'][]=$task;
 		}
 		$result->free();
 
-		//正在执行的任务
-		$result=self::$mysqli->query("select spider,count(*) as tasks from onprocess where status=1 group by spider");
+		//正在执行任务的爬虫
+		$result=self::$mysqli->query("select spider,count(*) as tasks from onprocess where acktime>".(time()-120)." group by spider");
 		while($task=mysqli_fetch_assoc($result)){
 			$queueinfo['spiders'][]=$task;
 		}
 		$result->free();
 		return $queueinfo;
+	}
+
+	//爬虫状态反馈（for web）
+	static function spiderReport($name,$ip){
+		return self::$mysqli->query("replace into spiders values(null,'".$name."','".$ip."',".time().")");
+	}
+
+	//在线爬虫列表（for web）
+	static function getSpiders(){
+		$spiders=array();
+		$result=self::$mysqli->query("select * from spiders where acktime>".(time()-120)); //获取120秒内有报告信息的爬虫
+		while($spider=mysqli_fetch_assoc($result)){
+			$spider['tasks']=0;
+			$spiders[]=$spider;
+		}
+		$result->free();
+		return $spiders;
 	}
 }

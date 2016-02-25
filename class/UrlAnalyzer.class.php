@@ -126,7 +126,7 @@ class UrlAnalyzer{
 
 				//使用ContentType获取字符编码，若未检出，则使用编码检测函数检测方式获取
 				$charset ='';
-				$validcharsets=array("GB2312","GBK","UTF-8","ISO-8859-1");
+				$validcharsets=array("UTF-8","GB2312","GBK","ISO-8859-1");
 				foreach (explode(";",$contentType) as $ct) {
 					$ctkv=explode("=",$ct);
 					if(count($ctkv)==2 && $ctkv[0]=='CHARSET'){

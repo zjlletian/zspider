@@ -68,7 +68,8 @@ class TaskManager {
 		if(!isset($urlinfo['error'])){
 			if($urlinfo['level']>0 && count($urlinfo['links'])>0){
 				foreach ($urlinfo['links'] as $url) {
-					self::addLinkToQueue($url,$urlinfo['level']-1);
+					$url=self::$mysqli->escape_string($url);
+					self::$mysqli->query("insert into newlinks values(null,'".$url."',".($urlinfo['level']-1).")");
 				}
 			}
 		}
@@ -92,31 +93,6 @@ class TaskManager {
 		}
 	}
 
-	//添加连接到队列中
-	private static function addLinkToQueue($url,$level){
-		$url=self::$mysqli->escape_string($url);
-
-		//忽略存在于不更新列表中的链接
-		if(self::$mysqli->query("select * from notupdate where url='".$url."' limit 1")->num_rows>0){
-			return ;
-		}
-		//忽略正在处理的链接
-		if(self::$mysqli->query("select * from onprocess where url='".$url."' limit 1")->num_rows>0){
-			return ;
-		}
-		//忽略标记为错误的链接
-		if(self::$mysqli->query("select * from errortask where url='".$url."' limit 1")->num_rows>0){
-			return ;
-		}
-		//若不存在队列中，则加入新任务。若存在level大于队列中的level，则更新队列中的level
-		if(!self::$mysqli->query("insert into taskqueue values(null,'".$url."',".$level.",".time().",0)")){
-			$task = mysqli_fetch_assoc(self::$mysqli->query("select * from taskqueue where url='".$url."' limit 1"));
-			if($task!=null && $task['level']<$level){
-				self::$mysqli->query("update taskqueue set level=".$level." where id=".$task['id']." limit 1");
-			}
-		}
-	}
-
 	//对执行结果分配更新任务
 	private static function addUpdateTask($url,$level){
 		$urlbak=$url;
@@ -131,10 +107,6 @@ class TaskManager {
 			}
 		}
 
-		self::$mysqli->begin_transaction();
-		//删除原有更新预约
-		self::$mysqli->query("delete from taskqueue where url=".$url." limit 1");
-
 		//分配更新时间
 		$updatetime=time()+$GLOBALS['UPDATE_TIME'][$level.''];
 		if(isset($GLOBALS['SITE_UPDATE'][$urlbak])){
@@ -147,7 +119,6 @@ class TaskManager {
 			}
 		}
 		self::$mysqli->query("insert ignore into taskqueue values(null,'".$url."',".$level.",".$updatetime.",1)");
-		self::$mysqli->commit();
 		return date("Y-m-d H:i:s",$updatetime);
 	}
 
