@@ -4,7 +4,9 @@ ZSpider分布式网站爬虫  开发日志 verison 6.5.0
 
 1.运行脚本需要screen与awk工具支持。
 
-2.关于Elasticsearch-php信息：https://github.com/elastic/elasticsearch-php
+2.php版本>=5.4。
+
+3.使用Elasticsearch-php作为ES连接工具。https://github.com/elastic/elasticsearch-php
 
 
 --------------------- 开发任务 ----------------------

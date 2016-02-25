@@ -1,16 +1,16 @@
 /*
 Navicat MySQL Data Transfer
 
-Source Server         : zhou-vm
-Source Server Version : 50629
-Source Host           : 192.168.1.105:3306
+Source Server         : zhoujunlong.dev
+Source Server Version : 50173
+Source Host           : zhoujunlong.dev:3306
 Source Database       : zspider
 
 Target Server Type    : MYSQL
-Target Server Version : 50629
+Target Server Version : 50173
 File Encoding         : 65001
 
-Date: 2016-02-25 02:55:10
+Date: 2016-02-25 14:53:43
 */
 
 SET FOREIGN_KEY_CHECKS=0;
@@ -27,6 +27,18 @@ CREATE TABLE `errortask` (
   UNIQUE KEY `url_unique` (`url`) USING BTREE,
   KEY `url_sort` (`url`) USING BTREE,
   KEY `time_sort` (`time`) USING BTREE
+) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
+
+-- ----------------------------
+-- Table structure for newlinks
+-- ----------------------------
+DROP TABLE IF EXISTS `newlinks`;
+CREATE TABLE `newlinks` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `url` varchar(255) NOT NULL,
+  `level` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `url_sort` (`url`) USING BTREE
 ) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
@@ -57,6 +69,19 @@ CREATE TABLE `onprocess` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `url_unique` (`url`)
 ) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
+
+-- ----------------------------
+-- Table structure for spiders
+-- ----------------------------
+DROP TABLE IF EXISTS `spiders`;
+CREATE TABLE `spiders` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(50) NOT NULL,
+  `ip` varchar(64) NOT NULL DEFAULT '',
+  `acktime` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `ip_unique` (`ip`) USING BTREE
+) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Table structure for taskqueue
