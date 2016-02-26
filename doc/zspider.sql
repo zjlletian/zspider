@@ -27,7 +27,7 @@ CREATE TABLE `errortask` (
   UNIQUE KEY `url_unique` (`url`) USING BTREE,
   KEY `url_sort` (`url`) USING BTREE,
   KEY `time_sort` (`time`) USING BTREE
-) ENGINE=MyISAM AUTO_INCREMENT=3373 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Table structure for newlinks
@@ -39,7 +39,7 @@ CREATE TABLE `newlinks` (
   `level` int(11) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `url_sort` (`url`) USING BTREE
-) ENGINE=MyISAM AUTO_INCREMENT=2385198 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Table structure for notupdate
@@ -50,7 +50,7 @@ CREATE TABLE `notupdate` (
   `url` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `url_unique` (`url`) USING BTREE
-) ENGINE=MyISAM AUTO_INCREMENT=103 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Table structure for onprocess
@@ -71,7 +71,7 @@ CREATE TABLE `onprocess` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `url_unique` (`url`),
   KEY `uniqid_sort` (`uniqid`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=46759 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Table structure for spiders
@@ -84,7 +84,7 @@ CREATE TABLE `spiders` (
   `acktime` int(11) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `ip_unique` (`ip`) USING BTREE
-) ENGINE=MyISAM AUTO_INCREMENT=355 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Table structure for taskqueue
@@ -101,4 +101,4 @@ CREATE TABLE `taskqueue` (
   KEY `time_sort` (`time`) USING BTREE,
   KEY `type_sort` (`type`) USING BTREE,
   KEY `url_sort` (`url`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=1539495 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
