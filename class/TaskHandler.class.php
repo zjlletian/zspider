@@ -82,12 +82,13 @@ class TaskHandler {
 			EsOpreator::upsertUrlInfo($urlinfo);
 		}
 
+		$log['url'] = empty($urlinfo['url'])?$task['url']:$urlinfo['url'];
+		$log['type']=$task['type']==0? "New":"Update";
+		$log['spider']=$GLOBALS['SPIDERNAME'];
+
 		//提交任务执行结果
 		if(TaskManager::submitTask($task,$urlinfo)){
 			//记录任务日志
-			$log['url'] = empty($urlinfo['url'])?$task['url']:$urlinfo['url'];
-			$log['type']=$task['type']==0? "New":"Update";
-			$log['spider']=$GLOBALS['SPIDERNAME'];
 			if(!isset($urlinfo['error'])){
 				$log['level']=$urlinfo['level'];
 				$logtype="success";
@@ -97,9 +98,14 @@ class TaskHandler {
 				$log['error']=$urlinfo['error'];
 				$logtype="error";
 			}
-			EsOpreator::putLog($log,$logtype);
-			unset($log);
 		}
+		else{
+			$log['level']=$task['level'];
+			$log['error']="Submit refused, Task has been transferred to other spider.";
+			$logtype="error";
+		}
+		EsOpreator::putLog($log,$logtype);
+		unset($log);
 		unset($urlinfo);
 	}
 }
