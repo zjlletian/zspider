@@ -62,8 +62,8 @@ class QueueWatcher {
 	//处理ack，将超时的task重新加入队列中
 	private static function handleAck(){
 		while(true) {
-			//处理200秒之前开始的任务(单任务最大执行时间为120秒)
-			$task =mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where status=1 and acktime<=".(time()-200)." limit 1")); 
+			//获取ack超时10秒及以上的任务
+			$task =mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where status=1 and acktime<=".(time()-10)." limit 1"));
 			if($task!=null){
 				$url = self::$mysqli->escape_string($task['url']);
 				//将执行次数小于4次的标记为需要重新处理，否则丢弃任务。
@@ -149,18 +149,19 @@ class QueueWatcher {
 		$queueinfo['update_task']=mysqli_fetch_assoc(self::$mysqli->query("select count(*) as count from taskqueue where type=1 and time<=".time()))['count'];
 
 		//正在执行的任务
-		$result=self::$mysqli->query("select * from onprocess where acktime>".(time()-120)." order by acktime");
+		$result=self::$mysqli->query("select * from onprocess order by proctime");
 		while($task=mysqli_fetch_assoc($result)){
 			$queueinfo['onprocess'][]=$task;
 		}
 		$result->free();
 
 		//正在执行任务的爬虫
-		$result=self::$mysqli->query("select spider,count(*) as tasks from onprocess where acktime>".(time()-120)." group by spider");
+		$result=self::$mysqli->query("select spider,count(*) as tasks from onprocess where acktime>".(time()-10)." group by spider");
 		while($task=mysqli_fetch_assoc($result)){
 			$queueinfo['spiders'][]=$task;
 		}
 		$result->free();
+
 		return $queueinfo;
 	}
 
@@ -172,7 +173,7 @@ class QueueWatcher {
 	//在线爬虫列表（for web）
 	static function getSpiders(){
 		$spiders=array();
-		$result=self::$mysqli->query("select * from spiders where acktime>".(time()-120)); //获取120秒内有报告信息的爬虫
+		$result=self::$mysqli->query("select * from spiders where acktime>".(time()-60)); //获取60秒内有报告信息的爬虫（三次报告时间）
 		while($spider=mysqli_fetch_assoc($result)){
 			$spider['tasks']=0;
 			$spiders[]=$spider;

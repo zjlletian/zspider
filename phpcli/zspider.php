@@ -30,7 +30,7 @@ Util::echoGreen("[".date("Y-m-d H:i:s")."] Create TaskHandler done, running Task
 Util::putErrorLog("Create TaskHandler done, running TaskHandler progress:".$GLOBALS['MAX_PARALLEL']."\r\n");
 
 //检测子进程退出状态
-for($count=1; $count<$GLOBALS['MAX_PARALLEL']; $count++){
+for($count=1; $count<=$GLOBALS['MAX_PARALLEL']; $count++){
 	pcntl_wait($status);
 	Util::echoRed("[".date("Y-m-d H:i:s")."] One TaskHandler stoped. running TaskHandler progress:".($GLOBALS['MAX_PARALLEL']-$count)."\n");
 	if(!Util::isNetError()){
@@ -54,6 +54,6 @@ function reportSpider(){
 		curl_setopt ( $ch, CURLOPT_RETURNTRANSFER, 1 );
 		curl_setopt ( $ch, CURLOPT_POSTFIELDS, $data );
 		$return = curl_exec ( $ch );
-		sleep(40);
+		sleep(20);
 	}
 }

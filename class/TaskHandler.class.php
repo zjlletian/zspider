@@ -27,7 +27,7 @@ class TaskHandler {
 		$pid = pcntl_fork();
 		if(!$pid) {
 			register_shutdown_function('fatalErrorHandler');
-			error_reporting(0);
+			//error_reporting(0);
 			self::runTask();
 		}
 		else{
@@ -48,7 +48,10 @@ class TaskHandler {
 		    $task=TaskManager::getTask();
 			if($task!=null){
 				self::$dealingTask=$task;
+				//设置最长任务时间，防止任务卡死
+				set_time_limit(120);
 				self::handleTask($task);
+				set_time_limit(0);
 			}
 			else{
 				sleep(2);
@@ -58,10 +61,7 @@ class TaskHandler {
 
 	//执行爬虫任务
 	private static function handleTask($task){
-
-		//设置单任务最大执行时间
-		set_time_limit(120);
-
+	
 		//解析URL信息
 		$urlinfo=UrlAnalyzer::getInfo($task['url'],$task['level']);
 
@@ -83,24 +83,23 @@ class TaskHandler {
 		}
 
 		//提交任务执行结果
-		TaskManager::submitTask($task,$urlinfo);
-		
-		//记录任务日志
-		$log['url'] = empty($urlinfo['url'])?$task['url']:$urlinfo['url'];
-		$log['type']=$task['type']==0? "New":"Update";
-		$log['spider']=$GLOBALS['SPIDERNAME'];
-		if(!isset($urlinfo['error'])){
-			$log['level']=$urlinfo['level'];
-			$logtype="success";
+		if(TaskManager::submitTask($task,$urlinfo)){
+			//记录任务日志
+			$log['url'] = empty($urlinfo['url'])?$task['url']:$urlinfo['url'];
+			$log['type']=$task['type']==0? "New":"Update";
+			$log['spider']=$GLOBALS['SPIDERNAME'];
+			if(!isset($urlinfo['error'])){
+				$log['level']=$urlinfo['level'];
+				$logtype="success";
+			}
+			else{
+				$log['level']=$task['level'];
+				$log['error']=$urlinfo['error'];
+				$logtype="error";
+			}
+			EsOpreator::putLog($log,$logtype);
+			unset($log);
 		}
-		elseif($urlinfo['code']==600){
-			$log['level']=$task['level'];
-			$log['error']=$urlinfo['error'];
-			$logtype="error";
-		}
-		EsOpreator::putLog($log,$logtype);
-		unset($log);
 		unset($urlinfo);
-		unset($response);
 	}
 }

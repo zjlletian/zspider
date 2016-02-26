@@ -73,7 +73,7 @@ $GLOBALS['UPDATE_TIME'] = array(
 	'0'=> 3600*24*30
 );
 
-//自定义站点更新周期与等级
+//自定义站点等级与更新周期
 $GLOBALS['SITE_UPDATE'] = array(
 	'http://news.ifeng.com/'=>array('level'=>1,'time'=>3600)
 );
@@ -87,9 +87,10 @@ $GLOBALS['NOTUPDATE_HAS'] = array(
 
 //默认起点站点
 $GLOBALS['DEFAULT_SITE'] = array(
-	array('url'=>'https://www.baidu.com/','level'=>1),
-	array('url'=>'http://baike.baidu.com/','level'=>2),
-	array('url'=>'http://www.ifeng.com/','level'=>2),
-	array('url'=>'http://www.163.com/','level'=>2),
-	array('url'=>'http://www.sina.com.cn/','level'=>2)
+	array('url'=>'https://www.baidu.com/','level'=>3),
+	array('url'=>'http://baike.baidu.com/','level'=>3),
+	array('url'=>'http://www.ifeng.com/','level'=>3),
+	array('url'=>'http://www.163.com/','level'=>3),
+	array('url'=>'http://www.sina.com.cn/','level'=>3),
+	array('url'=>'http://www.csdn.net/','level'=>2)
 );

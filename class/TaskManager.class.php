@@ -17,36 +17,38 @@ class TaskManager {
 		return true;
 	}
 
-	//获取一个到达处理时间的爬虫任务，$time:提前时间
-	static function getTask($time=0){
+	//获取一个到达处理时间的爬虫任务
+	static function getTask(){
+
+		$uniqid=uniqid();
 
 		//获取一个处理超时需要重新处理的任务
 		self::$mysqli->begin_transaction();
-		$task =mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where status=0 limit 1"));
-		if($task!=null && $task['times']<4){
-			//标记为正在处理
-			self::$mysqli->query("update onprocess set status=1, times=times+1, acktime=".time().", spider='".$GLOBALS['SPIDERNAME']."' where id=".$task['id']." limit 1");
+		$task =mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where status=0 and times<4 limit 1"));
+		if($task!=null){
+			//可用任务时间
+			$acktime=time()+60+$task['times']*10;
+			//标记为正在处理,并且增加10秒可处理时间（60，70，80, 90）
+			self::$mysqli->query("update onprocess set uniqid='".$uniqid."', status=1, times=times+1, proctime=".time().",acktime=".$acktime.", spider='".$GLOBALS['SPIDERNAME']."' where id=".$task['id']." and status=0 limit 1");
 		}
 		//如果获取到任务并且事务提交成功，则返回任务
-		if(self::$mysqli->commit() && $task!=null && $task['times']<4){
-			return $task;
+		if($task!=null && self::$mysqli->commit()){
+			return mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where uniqid='".$uniqid."' limit 1"));
 		}
 
 		//从任务队列中获取任务（时间升序：广度优先遍历，深度越深队列数据量越大,查询速度变慢。时间降序：深度优先遍历，新任务马上处理，老任务积压）
 		self::$mysqli->begin_transaction();
-		$task =mysqli_fetch_assoc(self::$mysqli->query("select * from taskqueue where time<=".(time()-$time)." order by time limit 1"));
+		$task =mysqli_fetch_assoc(self::$mysqli->query("select * from taskqueue where time<=".time()." order by time limit 1"));
 		if($task!=null){
 			$url=self::$mysqli->escape_string($task['url']);
 			//从队列中删除任务
 			self::$mysqli->query("delete from taskqueue where id=".$task['id']." limit 1");
 			//标记为正在处理
-			self::$mysqli->query("insert into onprocess values(null,'".$url."',".$task['level'].",".$task['time'].",".$task['type'].",".time().",1,1,'".$GLOBALS['SPIDERNAME']."')");
-			$task['id']=self::$mysqli->insert_id;
-			$task['spider']=$GLOBALS['SPIDERNAME'];
+			self::$mysqli->query("insert into onprocess values(null, '".$uniqid."','".$url."',".$task['level'].",".$task['time'].",".$task['type'].",".time().",".(time()+60).",1,1,'".$GLOBALS['SPIDERNAME']."')");
 		}
 		//如果获取到任务并且事务提交成功，则返回任务
-		if(self::$mysqli->commit() && $task!=null){
-			return $task;
+		if($task!=null && self::$mysqli->commit()){
+			return mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where uniqid='".$uniqid."' limit 1"));
 		}
 		return null;
 	}
@@ -54,6 +56,16 @@ class TaskManager {
 	//提交任务执行结果
 	static function submitTask($task,$urlinfo){
 
+		//检测任务是否已经移交给其他爬虫进程处理
+		if(mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where uniqid='".$task['uniqid']."' limit 1"))==null){
+			$dealtime = time()-$task['proctime'];
+			$maxtime = $task['acktime']-$task['proctime'];
+			$str="Submit refused, Task has been transferred to other spider. url: ".$task['url']."\r\n";
+			Util::putErrorLog($str);
+			Util::echoRed("[".date("Y-m-d H:i:s")."] Submit refused, Task has been transferred to other spider. url: ".$task['url']."\n\n");
+			return false;
+		}
+		
 		//对执行结果分配更新任务
 		if(!isset($urlinfo['error'])){
 			self::addUpdateTask($urlinfo['url'],$urlinfo['level']);
@@ -61,9 +73,6 @@ class TaskManager {
 		//从正在执行的任务中移除
 		self::$mysqli->query("delete from onprocess where id=".$task['id']);
 
-		//解除任务定时
-		set_time_limit(0);
-		
 		//当level>0时，将连接加入队列，否则记录错误
 		if(!isset($urlinfo['error'])){
 			if($urlinfo['level']>0 && count($urlinfo['links'])>0){
@@ -91,6 +100,7 @@ class TaskManager {
 				self::$mysqli->query("insert ignore into notupdate values(null,'".$taskurl."')"); //非html加入到notupdate
 			}
 		}
+		return true;
 	}
 
 	//对执行结果分配更新任务
