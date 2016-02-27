@@ -103,7 +103,9 @@ class TaskHandler {
 			}
 		}
 		else{
-			$log['error']="submit out of time ".(time()-$task['acktime'])."s than max ".($task['acktime']-$task['proctime'])."s";
+			$dealtime = time()-$task['proctime'];
+			$maxtime = $task['acktime']-$task['proctime'];
+			$log['error']="submit refused, used ".$dealtime."s to handle this url but max time allowed is ".$maxtime."s.";
 			$logtype="error";
 		}
 		EsOpreator::putLog($log,$logtype);

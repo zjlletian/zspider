@@ -65,7 +65,7 @@ class TaskManager {
 			Util::putErrorLog($str);
 			Util::echoRed("[".date("Y-m-d H:i:s")."] ".$str."\n");
 
-			$str="Message: Submit out of time ".$dealtime."s than max ".$maxtime.".s";
+			$str="Message: Used ".$dealtime."s to handle this url but max time allowed is ".$maxtime."s.";
 			Util::putErrorLog($str."\r\n");
 			Util::echoRed("[".date("Y-m-d H:i:s")."] ".$str."\n\n");
 			return false;
