@@ -60,9 +60,14 @@ class TaskManager {
 		if(mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where uniqid='".$task['uniqid']."' limit 1"))==null){
 			$dealtime = time()-$task['proctime'];
 			$maxtime = $task['acktime']-$task['proctime'];
-			$str="Submit refused, Task has been transferred to other spider. url: ".$task['url']."\r\n";
+
+			$str="Submit refused, url: ".$task['url'];
 			Util::putErrorLog($str);
-			Util::echoRed("[".date("Y-m-d H:i:s")."] Submit refused, Task has been transferred to other spider. url: ".$task['url']."\n\n");
+			Util::echoRed("[".date("Y-m-d H:i:s")."] ".$str."\n");
+
+			$str="Message: Submit out of time ".$dealtime."s than max ".$maxtime.".s";
+			Util::putErrorLog($str."\r\n");
+			Util::echoRed("[".date("Y-m-d H:i:s")."] ".$str."\n\n");
 			return false;
 		}
 		

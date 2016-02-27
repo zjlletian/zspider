@@ -10,7 +10,7 @@ Target Server Type    : MYSQL
 Target Server Version : 50629
 File Encoding         : 65001
 
-Date: 2016-02-26 16:00:39
+Date: 2016-02-28 00:01:12
 */
 
 SET FOREIGN_KEY_CHECKS=0;
@@ -24,9 +24,8 @@ CREATE TABLE `errortask` (
   `url` varchar(255) CHARACTER SET latin1 NOT NULL,
   `time` int(11) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `url_unique` (`url`) USING BTREE,
-  KEY `url_sort` (`url`) USING BTREE,
-  KEY `time_sort` (`time`) USING BTREE
+  UNIQUE KEY `url` (`url`) USING BTREE,
+  KEY `time` (`time`) USING BTREE
 ) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
@@ -37,8 +36,7 @@ CREATE TABLE `newlinks` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `url` varchar(255) NOT NULL,
   `level` int(11) NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `url_sort` (`url`) USING BTREE
+  PRIMARY KEY (`id`)
 ) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
@@ -49,7 +47,7 @@ CREATE TABLE `notupdate` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `url` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `url_unique` (`url`) USING BTREE
+  UNIQUE KEY `url` (`url`) USING BTREE
 ) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
@@ -69,9 +67,19 @@ CREATE TABLE `onprocess` (
   `status` int(11) NOT NULL DEFAULT '0',
   `spider` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `url_unique` (`url`),
-  KEY `uniqid_sort` (`uniqid`) USING BTREE
+  UNIQUE KEY `url` (`url`) USING BTREE,
+  KEY `uniqid` (`uniqid`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
+
+-- ----------------------------
+-- Table structure for queueinfo
+-- ----------------------------
+DROP TABLE IF EXISTS `queueinfo`;
+CREATE TABLE `queueinfo` (
+  `item` varchar(255) NOT NULL,
+  `value` varchar(255) NOT NULL,
+  UNIQUE KEY `key` (`item`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Table structure for spiders
@@ -83,7 +91,7 @@ CREATE TABLE `spiders` (
   `ip` varchar(64) NOT NULL DEFAULT '',
   `acktime` int(11) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `ip_unique` (`ip`) USING BTREE
+  UNIQUE KEY `ip` (`ip`) USING BTREE
 ) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
@@ -97,8 +105,8 @@ CREATE TABLE `taskqueue` (
   `time` int(11) NOT NULL,
   `type` int(11) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `url_unique` (`url`) USING BTREE,
-  KEY `time_sort` (`time`) USING BTREE,
-  KEY `type_sort` (`type`) USING BTREE,
-  KEY `url_sort` (`url`) USING BTREE
+  UNIQUE KEY `url` (`url`) USING BTREE,
+  KEY `type_time` (`type`,`time`) USING BTREE,
+  KEY `time` (`time`) USING BTREE,
+  KEY `type` (`type`) USING HASH
 ) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;

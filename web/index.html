@@ -20,14 +20,14 @@
 				<div class="col-md-12">
 					<h3>队列任务信息</h3>
 					<table class="table" id="queueinfo">
-						<tr><td>待爬取新网页数量</td><td id="newtask"></td></tr>
-						<tr><td>需要更新网页数量</td><td id="updatetask"></td></tr>
+						<tr><td>待爬取新网页数量</td><td id="newtask">loading</td></tr>
+						<tr><td>需要更新网页数量</td><td id="updatetask">loading</td></tr>
 					</table>
 				</div>
 			</div>
 			<div class="row">
 				<div class="col-md-12">
-					<h3 id='spidercount'>在线爬虫机器 : </h3>
+					<h3 id='spidercount'>在线爬虫列表 : loading </h3>
 					<table class="table" id="spiderlist"></table>
 				</div>
 			</div>
@@ -35,7 +35,7 @@
 		<div class="col-md-8">
 			<div class="row">
 				<div class="col-md-12">
-					<h2 id="onprocess">任务执行进度 ( 进行中: )</h2>
+					<h2 id="onprocess">任务执行进度&nbsp;&nbsp;( 执行:loading&nbsp;&nbsp;等待:loading&nbsp;&nbsp;超时:loading )</h2>
 				</div>
 			</div>
 			<div class="row">
@@ -58,8 +58,8 @@ var spiderinfo='<tr><td>{$name}</td> <td>{$ip}</td> <td>{$tasks}</td> </tr>';
 function loadData(){
 	$.get('/json/queueinfo',function(data){
 		//队列任务信息
-		$('#newtask').html(data.new_task);
-		$('#updatetask').html(data.update_task);
+		$('#newtask').html(data.new);
+		$('#updatetask').html(data.update_now);
 
 		//在线爬虫机器
 		$('#spidercount').html('在线爬虫列表 : '+data.spiders.length);
@@ -71,21 +71,22 @@ function loadData(){
 
 		//处理中的任务
 		loadTasks(data.onprocess);
+		setTimeout("loadData();",1000);
 	});
-	setTimeout("loadData();",1000);
 }
 
-var tasktemplet='<a href="{$href}" target="_blank">{$hreftext}</a><br>执行次数:{$times}&nbsp;&nbsp;&nbsp;等级:{$level}&nbsp;&nbsp;&nbsp;类型:{$type}&nbsp;&nbsp;&nbsp;加入队列时间:{$time}&nbsp;&nbsp;&nbsp;执行延迟:{$delay}<div id="{$id}p" class="progress"><div id="{$id}pb" class="progress-bar progress-bar-{$color} progress-bar-striped active" role="progressbar"style="text-align:left;padding-left:1%;min-width:6%;width:{$width}%">{$msg}</div></div>';
+var tasktemplet='<a href="{$href}" target="_blank">{$hreftext}</a><br>执行爬虫:{$spider}&nbsp;&nbsp;&nbsp;次数:{$times}&nbsp;&nbsp;&nbsp;等级:{$level}&nbsp;&nbsp;&nbsp;类型:{$type}&nbsp;&nbsp;&nbsp;预定时间:{$time}&nbsp;&nbsp;&nbsp;延迟:{$delay}<div id="{$id}p" class="progress"><div id="{$id}pb" class="progress-bar progress-bar-{$color} progress-bar-striped active" role="progressbar"style="text-align:left;padding-left:1%;min-width:6%;width:{$width}%">{$msg}</div></div>';
 
 //加载任务数据
 var pretasks=[];
 function loadTasks(tasks){
 	tlist='';
+	var wait=0;
 	var error=0;
 	for(var i=0;i<tasks.length;i++){
 		taskbar=tasktemplet.replace('{$href}',tasks[i].url).replace('{$hreftext}',(tasks[i].url.length>80?tasks[i].url.substr(0,80)+'....':tasks[i].url));
-		taskbar=taskbar.replace('{$level}',tasks[i].level).replace('{$type}',(tasks[i].type==0?'New':'Update'));
-		taskbar=taskbar.replace('{$time}',tasks[i].time).replace('{$delay}',tasks[i].delay);
+		taskbar=taskbar.replace('{$level}',tasks[i].level).replace('{$type}',(tasks[i].type==0?'新页面':'更新'));
+		taskbar=taskbar.replace('{$time}',tasks[i].time).replace('{$delay}',tasks[i].delay).replace('{$spider}',tasks[i].spider);
 		taskbar=taskbar.replace('{$id}',tasks[i].id).replace('{$id}',tasks[i].id);
 		taskbar=taskbar.replace('{$width}',tasks[i].cost/tasks[i].max*100).replace('{$times}',tasks[i].times);
 
@@ -108,25 +109,26 @@ function loadTasks(tasks){
 			taskbar=taskbar.replace('{$msg}',tasks[i].cost+"/"+tasks[i].max);
 		}
 		else if(tasks[i].times<4 && (10-tasks[i].cost+tasks[i].max)>=0 ){
-			error+=1;
-			taskbar=taskbar.replace('{$msg}','任务超时: '+(10-tasks[i].cost+tasks[i].max)+'秒后将转交给其他爬虫处理');
+			wait+=1;
+			taskbar=taskbar.replace('{$msg}','等待爬虫响应: '+(10-tasks[i].cost+tasks[i].max)+'秒后将转交给其他爬虫处理');
 		}
 		else if(tasks[i].times<4 && (10-tasks[i].cost+tasks[i].max)<0 ){
 			error+=1;
 			taskbar=taskbar.replace('{$msg}','任务超时：等待其他爬虫处理');
 		}
-		else if(tasks[i].times>=4 && (10-tasks[i].cost+tasks[i].max)>0){
-			error+=1;
-			taskbar=taskbar.replace('{$msg}','任务超时: '+(10-tasks[i].cost+tasks[i].max)+'秒后将删除任务');
+		else if(tasks[i].times>=4 && (10-tasks[i].cost+tasks[i].max)>=0){
+			wait+=1;
+			taskbar=taskbar.replace('{$msg}','等待爬虫响应: '+(10-tasks[i].cost+tasks[i].max)+'秒后任务将删除');
 		}
 		else{
-			taskbar='';
+			error+=1;
+			taskbar=taskbar.replace('{$msg}','任务超时次数过多: 任务将删除');
 		}
 		tlist+=taskbar;
 	}
 
     $('#tasks').html(tlist);
-    $('#onprocess').html('任务执行进度 ( 处理中:'+(tasks.length-error)+' 已停止:'+error+')');
+    $('#onprocess').html('任务执行进度&nbsp;&nbsp;( 执行:'+(tasks.length-error)+'&nbsp;&nbsp;等待:'+wait+'&nbsp;&nbsp;超时:'+error+' )');
     pretasks=tasks;
 }
 

@@ -6,14 +6,17 @@ function fatalErrorHandler(){
 	$types=array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR);
 	$e = error_get_last();
 	if(in_array($e['type'],$types)){
-		$str="TaskHandler stop on dealing with url: ".TaskHandler::$dealingTask['url'];
+		$str="Fatal Error, url: ".TaskHandler::$dealingTask['url'];
 		Util::putErrorLog($str);
+		Util::echoRed("[".date("Y-m-d H:i:s")."] ".$str."\n");
+
 		$str="Message: ".$e['message'];
 		Util::putErrorLog($str);
-		$str="File: ".$e['file']." (line ".$e['line'].")\r\n";
-		Util::putErrorLog($str);
-		Util::echoRed("[".date("Y-m-d H:i:s")."] Fatal Error on dealing with ".TaskHandler::$dealingTask['url']."\n");
-		Util::echoRed("[".date("Y-m-d H:i:s")."] Message: ".$e['message']."\n");
+		Util::echoRed("[".date("Y-m-d H:i:s")."] ".$str."\n");
+
+		$str="File: ".$e['file']." (line ".$e['line'].")";
+		Util::putErrorLog($str."\r\n");
+		Util::echoRed("[".date("Y-m-d H:i:s")."] ".$str."\n\n");
 	}
 }
 
@@ -48,8 +51,8 @@ class TaskHandler {
 		    $task=TaskManager::getTask();
 			if($task!=null){
 				self::$dealingTask=$task;
-				//设置最长任务时间，防止任务卡死
-				set_time_limit(120);
+				//设置最长任务时间，防止任务卡死（该函数经常失效）
+				set_time_limit(180);
 				self::handleTask($task);
 				set_time_limit(0);
 			}
@@ -68,7 +71,7 @@ class TaskHandler {
 		//如果返回状态为0，则检查网络
 		if($urlinfo['code']==0){
 			if(Util::isNetError()){
-				$str="TaskHandler stop on dealing with url: ".self::$dealingTask['url'];
+				$str="TaskHandler stop, url: ".self::$dealingTask['url'];
 				Util::putErrorLog($str);
 				$str="Message: Network is error.\r\n";
 				Util::putErrorLog($str);
@@ -82,26 +85,25 @@ class TaskHandler {
 			EsOpreator::upsertUrlInfo($urlinfo);
 		}
 
-		$log['url'] = empty($urlinfo['url'])?$task['url']:$urlinfo['url'];
+		//提交任务执行结果,记录日志到ES
+		$log['url']=$task['url'];
 		$log['type']=$task['type']==0? "New":"Update";
-		$log['spider']=$GLOBALS['SPIDERNAME'];
+		$log['level']=$task['level'];
+		$log['spider']=$task['spider'];
 
-		//提交任务执行结果
 		if(TaskManager::submitTask($task,$urlinfo)){
-			//记录任务日志
 			if(!isset($urlinfo['error'])){
+				$log['url']=$urlinfo['url'];
 				$log['level']=$urlinfo['level'];
 				$logtype="success";
 			}
 			else{
-				$log['level']=$task['level'];
 				$log['error']=$urlinfo['error'];
 				$logtype="error";
 			}
 		}
 		else{
-			$log['level']=$task['level'];
-			$log['error']="Submit refused, Task has been transferred to other spider.";
+			$log['error']="submit out of time ".(time()-$task['acktime'])."s than max ".($task['acktime']-$task['proctime'])."s";
 			$logtype="error";
 		}
 		EsOpreator::putLog($log,$logtype);

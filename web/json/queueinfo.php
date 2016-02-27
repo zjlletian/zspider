@@ -2,9 +2,12 @@
 require_once(dirname(dirname(dirname(__FILE__))).'/Config.php');
 header('Content-type:text/json;charset:utf-8');
 
-//队列信息
+
 QueueWatcher::connect(false);
 $queueinfo=QueueWatcher::getQueueInfo();
+$spiders = QueueWatcher::getSpiders();
+
+//队列信息
 $onprocess = array();
 foreach ($queueinfo['onprocess'] as $task) {
 	$delay=$task['proctime']-$task['time'];
@@ -24,7 +27,6 @@ foreach ($queueinfo['onprocess'] as $task) {
 $queueinfo['onprocess']=$onprocess;
 
 //爬虫列表
-$spiders = QueueWatcher::getSpiders();
 $spidersinfo= array();
 foreach ($spiders as $spider) {
 	$tasks=0;
@@ -37,4 +39,5 @@ foreach ($spiders as $spider) {
 	$spidersinfo[]=$spider;
 }
 $queueinfo['spiders']=$spidersinfo;
+
 echo json_encode($queueinfo);

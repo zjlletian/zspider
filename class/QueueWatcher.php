@@ -37,6 +37,16 @@ class QueueWatcher {
 			self::handleAck();
 		}
 
+		//启动新链接转储进程
+		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create NewLinks transporter...\n");
+		for($count=0;$count<10;$count++){
+			$pid = pcntl_fork();
+			if(!$pid) {
+				self::connect();
+				self::handleNewLinks($count*50);
+			}
+		}
+
 		//启动删除过期错误进程
 		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create ErrorLinks Watcher...\n");
 		$pid = pcntl_fork();
@@ -45,14 +55,12 @@ class QueueWatcher {
 			self::cleanErrorLinks();
 		}
 
-		//启动新链接转储进程
-		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create NewLinks transporter...\n\n");
-		for($count=0;$count<10;$count++){
-			$pid = pcntl_fork();
-			if(!$pid) {
-				self::connect();
-				self::handleNewLinks($count*50);
-			}
+		//收集队列信息
+		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create Queueinfo collector...\n\n");
+		$pid = pcntl_fork();
+		if(!$pid) {
+			self::connect();
+			self::queueinfoCollector();
 		}
 
 		pcntl_wait($status);
@@ -138,15 +146,26 @@ class QueueWatcher {
 		}
 	}
 
+	//队列信息收集，因为某些count(*)在大量数据下执行需要很长时间，所以采用单独进程统计数据
+	private static function queueinfoCollector(){
+		while(true){
+
+			//等待爬取的新网页数量
+			$new=mysqli_fetch_assoc(self::$mysqli->query("select count(*) as count from taskqueue where type=0"))['count'];
+			self::$mysqli->query("replace into queueinfo values('new','".$new."')");
+
+			//需要现在更新的网页数量
+			$update_now=mysqli_fetch_assoc(self::$mysqli->query("select count(*) as count from taskqueue where type=1 and time<=".time()))['count'];
+			self::$mysqli->query("replace into queueinfo values('update_now','".$update_now."')");
+
+			sleep(2);
+		}
+	}
+
 	//获取队列信息(for web)
 	static function getQueueInfo(){
+		
 		$queueinfo=array('onprocess'=>array(),'spiders'=>array());
-
-		//等待爬取的新网页数量
-		$queueinfo['new_task']=mysqli_fetch_assoc(self::$mysqli->query("select count(*) as count from taskqueue where type=0"))['count'];
-
-		//需要更新的网页数量
-		$queueinfo['update_task']=mysqli_fetch_assoc(self::$mysqli->query("select count(*) as count from taskqueue where type=1 and time<=".time()))['count'];
 
 		//正在执行的任务
 		$result=self::$mysqli->query("select * from onprocess order by proctime");
@@ -162,12 +181,10 @@ class QueueWatcher {
 		}
 		$result->free();
 
-		return $queueinfo;
-	}
+		$queueinfo['new']=mysqli_fetch_assoc(self::$mysqli->query("select value from queueinfo where item='new'"))['value'];
+		$queueinfo['update_now']=mysqli_fetch_assoc(self::$mysqli->query("select value from queueinfo where item='update_now'"))['value'];
 
-	//爬虫状态反馈（for web）
-	static function spiderReport($name,$ip){
-		return self::$mysqli->query("replace into spiders values(null,'".$name."','".$ip."',".time().")");
+		return $queueinfo;
 	}
 
 	//在线爬虫列表（for web）
@@ -180,5 +197,10 @@ class QueueWatcher {
 		}
 		$result->free();
 		return $spiders;
+	}
+
+	//爬虫状态反馈（for web）
+	static function spiderReport($name,$ip){
+		return self::$mysqli->query("replace into spiders values(null,'".$name."','".$ip."',".time().")");
 	}
 }

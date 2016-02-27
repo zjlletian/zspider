@@ -7,6 +7,9 @@ if(count($argv)<2 || $argv[1]!='byscreen'){
 	exit();
 }
 
+//重命名旧的日志文件
+Util::renameOldLog();
+
 //检查网络是否连接，如果网络中断则停止运行
 if(Util::isNetError()){
 	Util::putErrorLog("Start failed, network error.\r\n");

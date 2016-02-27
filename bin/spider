@@ -5,6 +5,7 @@ function showhelp(){
 	echo -e "List of valid commands:"
 	echo -e "start  :  start zspider by screen tool."
 	echo -e "stop   :  kill zspider screen and other progresses."
+	echo -e "restart:  same to run stop and start."
 	echo -e "screen :  same to run 'screen -r zspider'."
 	echo -e "status :  show running status of zspider.\n"
 }
@@ -71,6 +72,9 @@ if [ $1 = 'start' ];then
 	start
 elif [ $1 = 'stop' ];then
 	stop
+elif [ $1 = 'restart' ];then
+	stop
+	start
 elif [ $1 = 'screen' ];then
 	screen -r zspider
 elif [ $1 = 'status' ];then

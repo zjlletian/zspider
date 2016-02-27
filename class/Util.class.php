@@ -9,6 +9,13 @@ class Util{
 		return !$check;
 	}
 
+	//重命名以前的日志
+	static function renameOldLog(){
+		if(file_exists(APPROOT."/log/error.log")){
+			rename(APPROOT."/log/error.log", APPROOT."/log/error.".date("Y.m.d.H.i.s").".log");
+		}
+	}
+
 	//记录错误日志
 	static function putErrorLog($log){
 		$errorpath=APPROOT."/log";
