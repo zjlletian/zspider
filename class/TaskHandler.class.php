@@ -103,7 +103,7 @@ class TaskHandler {
 			}
 		}
 		else{
-			$dealtime = time()-$task['proctime'];
+			$dealtime = TaskManager::getServerTime()-$task['proctime'];
 			$maxtime = $task['acktime']-$task['proctime'];
 			$log['error']="submit refused, used ".$dealtime."s to handle this url but max time allowed is ".$maxtime."s.";
 			$logtype="error";

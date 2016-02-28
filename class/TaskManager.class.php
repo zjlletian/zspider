@@ -17,6 +17,11 @@ class TaskManager {
 		return true;
 	}
 
+	//获取服务器时间
+	static function getServerTime(){
+		return intval(mysqli_fetch_assoc(self::$mysqli->query("select unix_timestamp(now()) as time"))['time']);
+	}
+
 	//获取一个到达处理时间的爬虫任务
 	static function getTask(){
 
@@ -27,9 +32,9 @@ class TaskManager {
 		$task =mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where status=0 and times<4 limit 1"));
 		if($task!=null){
 			//可用任务时间
-			$acktime=time()+60+$task['times']*10;
-			//标记为正在处理,并且增加10秒可处理时间（60，70，80, 90）
-			self::$mysqli->query("update onprocess set uniqid='".$uniqid."', status=1, times=times+1, proctime=".time().",acktime=".$acktime.", spider='".$GLOBALS['SPIDERNAME']."' where id=".$task['id']." and status=0 limit 1");
+			$maxtime=60+$task['times']*10;
+			//标记为正在处理,并且增加10秒可处理时间（60=>70=>80=>90）
+			self::$mysqli->query("update onprocess set uniqid='".$uniqid."', status=1, times=times+1, proctime=(SELECT unix_timestamp(now())),acktime=(SELECT unix_timestamp(now()))+".$maxtime.", spider='".$GLOBALS['SPIDERNAME']."' where id=".$task['id']." and status=0 limit 1");
 		}
 		//如果获取到任务并且事务提交成功，则返回任务
 		if($task!=null && self::$mysqli->commit()){
@@ -38,13 +43,13 @@ class TaskManager {
 
 		//从任务队列中获取任务（时间升序：广度优先遍历，深度越深队列数据量越大,查询速度变慢。时间降序：深度优先遍历，新任务马上处理，老任务积压）
 		self::$mysqli->begin_transaction();
-		$task =mysqli_fetch_assoc(self::$mysqli->query("select * from taskqueue where time<=".time()." order by time limit 1"));
+		$task =mysqli_fetch_assoc(self::$mysqli->query("select * from taskqueue where time<=(SELECT unix_timestamp(now())) order by time limit 1"));
 		if($task!=null){
 			$url=self::$mysqli->escape_string($task['url']);
 			//从队列中删除任务
 			self::$mysqli->query("delete from taskqueue where id=".$task['id']." limit 1");
 			//标记为正在处理
-			self::$mysqli->query("insert into onprocess values(null, '".$uniqid."','".$url."',".$task['level'].",".$task['time'].",".$task['type'].",".time().",".(time()+60).",1,1,'".$GLOBALS['SPIDERNAME']."')");
+			self::$mysqli->query("insert into onprocess values(null, '".$uniqid."','".$url."',".$task['level'].",".$task['time'].",".$task['type'].",(SELECT unix_timestamp(now())),(SELECT unix_timestamp(now()))+60,1,1,'".$GLOBALS['SPIDERNAME']."')");
 		}
 		//如果获取到任务并且事务提交成功，则返回任务
 		if($task!=null && self::$mysqli->commit()){
@@ -58,7 +63,8 @@ class TaskManager {
 
 		//检测任务是否已经移交给其他爬虫进程处理
 		if(mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where uniqid='".$task['uniqid']."' limit 1"))==null){
-			$dealtime = time()-$task['proctime'];
+			$servertime = self::getServerTime();
+			$dealtime = $servertime-$task['proctime'];
 			$maxtime = $task['acktime']-$task['proctime'];
 
 			$str="Submit refused, url: ".$task['url'];
@@ -90,16 +96,16 @@ class TaskManager {
 		else{
 			$taskurl =self::$mysqli->escape_string($task['url']);
 			if($urlinfo['code']==0){
-				self::$mysqli->query("replace into errortask values(null,'".$taskurl."',".(time()+3600*24*100).")"); //连接错误，100天后清理
+				self::$mysqli->query("replace into errortask values(null,'".$taskurl."',(SELECT unix_timestamp(now()))+3600*24*100)"); //连接错误，100天后清理
 			}
 			else if($urlinfo['code']<500){
-				self::$mysqli->query("replace into errortask values(null,'".$taskurl."',".(time()+3600*24*80).")"); //http错误，80天后清理
+				self::$mysqli->query("replace into errortask values(null,'".$taskurl."',(SELECT unix_timestamp(now()))+3600*24*80)"); //http错误，80天后清理
 			}
 			else if(500<=$urlinfo['code'] && $urlinfo['code']<600){
-				self::$mysqli->query("replace into errortask values(null,'".$taskurl."',".(time()+3600*24*50).")"); //服务器错误，50天后清理
+				self::$mysqli->query("replace into errortask values(null,'".$taskurl."',(SELECT unix_timestamp(now()))+3600*24*50)"); //服务器错误，50天后清理
 			}
 			else if(600<=$urlinfo['code'] && $urlinfo['code']<700){
-				self::$mysqli->query("replace into errortask values(null,'".$taskurl."',".(time()+3600*24*50).")"); //内容错误，50天后清理
+				self::$mysqli->query("replace into errortask values(null,'".$taskurl."',(SELECT unix_timestamp(now()))+3600*24*50)"); //内容错误，50天后清理
 			}
 			else if($urlinfo['code']==800){
 				self::$mysqli->query("insert ignore into notupdate values(null,'".$taskurl."')"); //非html加入到notupdate

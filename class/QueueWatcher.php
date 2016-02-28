@@ -71,7 +71,7 @@ class QueueWatcher {
 	private static function handleAck(){
 		while(true) {
 			//获取ack超时10秒及以上的任务
-			$task =mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where status=1 and acktime<=".(time()-10)." limit 1"));
+			$task =mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where status=1 and acktime<=(SELECT unix_timestamp(now())-10) limit 1"));
 			if($task!=null){
 				$url = self::$mysqli->escape_string($task['url']);
 				//将执行次数小于4次的标记为需要重新处理，否则丢弃任务。
@@ -80,7 +80,7 @@ class QueueWatcher {
 					Util::echoRed("[".date("Y-m-d H:i:s")."] Ack out of time ".$task['times']." times, task abandon.\n");
 					Util::echoRed("Type:".$task['type']." Level:".$task['level']." Url:".$url."\n\n");
 					self::$mysqli->query("delete from onprocess where id=".$task['id']." limit 1");
-					self::$mysqli->query("replace into errortask values(null,'".$url."',".(time()+3600*24*100).")"); //错误连接，100天后清理
+					self::$mysqli->query("replace into errortask values(null,'".$url."',(SELECT unix_timestamp(now())+3600*24*100))"); //错误连接，100天后清理
 				}
 				else{
 					Util::echoYellow("[".date("Y-m-d H:i:s")."] Ack out of time ".$task['times']." times, task retry.\n");
@@ -130,7 +130,7 @@ class QueueWatcher {
 			return ;
 		}
 		//若不存在队列中，则加入新任务。若存在level大于队列中的level，则更新队列中的level
-		if(!self::$mysqli->query("insert into taskqueue values(null,'".$url."',".$level.",".time().",0)")){
+		if(!self::$mysqli->query("insert into taskqueue values(null,'".$url."',".$level.",(SELECT unix_timestamp(now())),0)")){
 			$task = mysqli_fetch_assoc(self::$mysqli->query("select * from taskqueue where url='".$url."' limit 1"));
 			if($task!=null && $task['level']<$level){
 				self::$mysqli->query("update taskqueue set level=".$level." where id=".$task['id']." limit 1");
@@ -141,7 +141,7 @@ class QueueWatcher {
 	//清除到达清理时间的错误连接，每10天执行一次
 	private static function cleanErrorLinks(){
 		while (true) {
-			self::$mysqli->query("delete from errortask where time<=".time());
+			self::$mysqli->query("delete from errortask where time<=(SELECT unix_timestamp(now()))");
 			time_sleep_until(time()+3600*24*10);
 		}
 	}
@@ -155,7 +155,7 @@ class QueueWatcher {
 			self::$mysqli->query("replace into queueinfo values('new','".$new."')");
 
 			//需要现在更新的网页数量
-			$update_now=mysqli_fetch_assoc(self::$mysqli->query("select count(*) as count from taskqueue where type=1 and time<=".time()))['count'];
+			$update_now=mysqli_fetch_assoc(self::$mysqli->query("select count(*) as count from taskqueue where type=1 and time<=(SELECT unix_timestamp(now()))"))['count'];
 			self::$mysqli->query("replace into queueinfo values('update_now','".$update_now."')");
 
 			sleep(2);
@@ -175,7 +175,7 @@ class QueueWatcher {
 		$result->free();
 
 		//正在执行任务的爬虫
-		$result=self::$mysqli->query("select spider,count(*) as tasks from onprocess where acktime>".(time()-10)." group by spider");
+		$result=self::$mysqli->query("select spider,count(*) as tasks from onprocess where acktime>(SELECT unix_timestamp(now())-10) group by spider");
 		while($task=mysqli_fetch_assoc($result)){
 			$queueinfo['spiders'][]=$task;
 		}
@@ -190,7 +190,7 @@ class QueueWatcher {
 	//在线爬虫列表（for web）
 	static function getSpiders(){
 		$spiders=array();
-		$result=self::$mysqli->query("select * from spiders where acktime>".(time()-60)); //获取60秒内有报告信息的爬虫（三次报告时间）
+		$result=self::$mysqli->query("select * from spiders where acktime>(SELECT unix_timestamp(now())-60)"); //获取60秒内有报告信息的爬虫（三次报告时间）
 		while($spider=mysqli_fetch_assoc($result)){
 			$spider['tasks']=0;
 			$spiders[]=$spider;
@@ -201,6 +201,6 @@ class QueueWatcher {
 
 	//爬虫状态反馈（for web）
 	static function spiderReport($name,$ip){
-		return self::$mysqli->query("replace into spiders values(null,'".$name."','".$ip."',".time().")");
+		return self::$mysqli->query("replace into spiders values(null,'".$name."','".$ip."',(SELECT unix_timestamp(now())))");
 	}
 }

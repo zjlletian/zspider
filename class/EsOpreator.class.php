@@ -44,7 +44,7 @@ class EsOpreator{
 
 	//保存urlinfo到ES
 	static function upsertUrlInfo($urlinfo){
-		$urlinfo['time'] = date("Y-m-d H:i:s");
+		$urlinfo['time'] = date("Y-m-d H:i:s",TaskManager::getServerTime());
 		unset($urlinfo['code']);
 		unset($urlinfo['links']);
 		unset($urlinfo['level']);
@@ -92,11 +92,12 @@ class EsOpreator{
 
 	//记录日志
 	static function putLog($log,$logtype){
-		$log['time']=date("Y-m-d H:i:s");
-		if(self::$logindex==null || self::$logindex!="zspiderlog-".date("Y.m.d")){
-			self::$logindex="zspiderlog-".date("Y.m.d");
+		$servertime=TaskManager::getServerTime();
+		$log['time']=date("Y-m-d H:i:s",$servertime);
+		if(self::$logindex==null || self::$logindex!="zspiderlog-".date("Y.m.d",$servertime)){
+			self::$logindex="zspiderlog-".date("Y.m.d",$servertime);
 			self::creatLogIndex();
 		}
-		return EsConnector::insertDoc(self::$logindex,$logtype,time().uniqid(),$log);
+		return EsConnector::insertDoc(self::$logindex,$logtype,$servertime.uniqid(),$log);
 	}
 }

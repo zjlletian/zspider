@@ -31,7 +31,7 @@ $spidersinfo= array();
 foreach ($spiders as $spider) {
 	$tasks=0;
 	foreach ($queueinfo['spiders'] as $st) {
-		if($spider['name']=$st['spider']){
+		if($spider['name']==$st['spider']){
 			$tasks=$st['tasks'];
 		}
 	}
