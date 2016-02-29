@@ -12,8 +12,9 @@ if(!isset($urlinfo['error'])){
 	echo "Html size: ".number_format(strlen($urlinfo['html'])/1024,1)."KB\n";
 	echo "Links count: ".count($urlinfo['links'])."\n";
 	foreach ($urlinfo['links'] as $link) {
-		echo $link."\n";
+		//echo $link."\n";
 	}
+	echo $urlinfo['text']."\n";
 }
 else{
 	Util::echoRed("Get Info failed: ".$url."\nError Message: ".$urlinfo['error']."\n");

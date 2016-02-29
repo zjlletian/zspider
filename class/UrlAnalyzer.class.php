@@ -17,7 +17,7 @@ class UrlAnalyzer{
 
 	//获取url的信息：url:实际访问的地址，code:状态码，charset:原始字符编码，text:纯文本内容，html:网页快照内容，level:判定后的level，error:错误信息
 	static function getInfoOnce($url,$level,$referer=null,$istest=false){
-
+		$now=time();
 		//设置curl
 		$ch = curl_init();
 		//curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
@@ -50,6 +50,10 @@ class UrlAnalyzer{
 			//执行请求，对重定向地址循环执行，最大重定向次数5
 			for($loops=0; $loops<5; $loops++) {
 				$htmltext = curl_exec($ch);
+				if($istest){
+					echo "download:".(time()-$now)."s\n";
+					$now=time();
+				}
 				$responseheader = curl_getinfo($ch);
 				$response['url'] = $responseheader['url'];
 				$response['code'] = $responseheader['http_code'];
@@ -124,6 +128,7 @@ class UrlAnalyzer{
 					throw new Exception("empty html");
 				}
 
+				$now=time();
 				//使用ContentType获取字符编码，若未检出，则使用编码检测函数检测方式获取
 				$charset ='';
 				$validcharsets=array("UTF-8","GB2312","GBK","ISO-8859-1");
@@ -152,10 +157,20 @@ class UrlAnalyzer{
 					$response['code'] = 600;
 		    		throw new Exception("html is too long. (doc size=".strlen($htmltext).", max size=".$GLOBALS['MAX_HTMLSISE'].")");
 				}
+				if($istest){
+					echo "convert charset:".(time()-$now)."s\n";
+					$now=time();
+				}
 
 				//开始html解析
+				$response['html']=$htmltext;
+				$htmltext=str_ireplace("&amp;","&",$htmltext);
 				$htmldom= new simple_html_dom();
 				$htmldom->load($htmltext);
+				if($istest){
+					echo "load html:".(time()-$now)."s\n";
+					$now=time();
+				}
 
 				//获取标题
 				$title=$htmldom->find('title',0);
@@ -164,6 +179,10 @@ class UrlAnalyzer{
 					throw new Exception("site has no title.");
 				}
 				$response['title']=trim($title->innertext);
+				if($istest){
+					echo "find title:".(time()-$now)."s\n";
+					$now=time();
+				}
 
 				//获取html中纯文本内容
 				$body=$htmldom->find('body',0);
@@ -171,13 +190,19 @@ class UrlAnalyzer{
 					$response['code'] = 600;
 					throw new Exception("site has no body.");
 				}
-				$text=self::htmlFilter($body->innertext);
+				if($istest){
+					echo "find body:".(time()-$now)."s\n";
+					$now=time();
+				}
+				$text=self::htmlFilter($body->plaintext);
 				$response['text']=empty($text)?$response['title']:$text;
+
 				unset($body);
 				unset($text);
-
-				//网页快照
-				$response['html']=$htmltext;
+				if($istest){
+					echo "get plaintext:".(time()-$now)."s\n";
+					$now=time();
+				}
 				
 				//解析网页中的超链接
 				$baseurl=self::urlSplit($response['url']);
@@ -186,13 +211,18 @@ class UrlAnalyzer{
 			    	$href=self::transformHref($a->href, $baseurl);
 			    	if($href!=false){
 			    		if($istest){
-							$href=$a->href."    ===>   ".$href;
+							$href="href：".$a->href.' link:'.$href;
 						}
 			    		if(!in_array($href,$response['links'])){
 			    			$response['links'][]=$href;
 			    		}
 			    	}
 			    }
+			    if($istest){
+					echo "find links:".(time()-$now)."s\n";
+					$now=time();
+				}
+
 				$htmldom->clear();
 				unset($htmldom);
 			}
@@ -217,29 +247,25 @@ class UrlAnalyzer{
 
 	//过滤html内容
 	static function htmlFilter($htmltext){
-		$search = array (
-			"'<script[^>]*?>.*?</script>'si",
-			"'<style[^>]*?>.*?</style>'si", 
-			/*"'<a[^>]*?>.*?</a>'si",*/
-			"'<img[^>]*?>.*?</img>'si",
-			"'<input[^>]*?>.*?</input>'si",
-			"'<!--[/!]*?[^<>]*?>'si",
-			"'([rn])[s]+'",
-			"'&(quot|#34);'i",
-			"'&(amp|#38);'i", 
-			"'&(lt|#60);'i", 
-			"'&(gt|#62);'i", 
-			"'&(nbsp|#160);'i", 
-			"'&(iexcl|#161);'i", 
-			"'&(cent|#162);'i", 
-			"'&(pound|#163);'i", 
-			"'&(copy|#169);'i", 
-			"'&#(d+);'e"
+
+		//去除多余的html标签
+		$htmltext=strip_tags($htmltext);
+
+		//转换html标记
+		$filtrule=array(
+			"&nbsp;"=>" ",
+			"&nbsp"=>" ",
+			"&lsquo;"=>"",
+			"&rsquo;"=>"",
+			"\t"=>" ",
+			"\n"=>" "
 		);
-		//去除标签以及innertext
-		$htmltext = preg_replace($search," ", $htmltext);
-		//去除'<></>'标签
-		return strip_tags($htmltext);
+		$htmltext=strtr($htmltext,$filtrule);
+
+		//合并多个空格
+		$htmltext=preg_replace("/[\s]+/is"," ",$htmltext);
+
+		return $htmltext;
 	}
 
 	//将url拆分,返回：协议，主机地址，路径，文档名，参数

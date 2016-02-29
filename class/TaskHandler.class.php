@@ -51,8 +51,8 @@ class TaskHandler {
 		    $task=TaskManager::getTask();
 			if($task!=null){
 				self::$dealingTask=$task;
-				//设置最长任务时间，防止任务卡死（该函数经常失效）
-				set_time_limit(180);
+				//设置单个最长任务时间，防止任务卡死（该函数时间不包括调用系统函数时间，调用数据库或sleep时间）
+				set_time_limit(120);
 				self::handleTask($task);
 				set_time_limit(0);
 			}

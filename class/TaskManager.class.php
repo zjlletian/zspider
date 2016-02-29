@@ -31,9 +31,8 @@ class TaskManager {
 		self::$mysqli->begin_transaction();
 		$task =mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where status=0 and times<4 limit 1"));
 		if($task!=null){
-			//可用任务时间
-			$maxtime=60+$task['times']*10;
-			//标记为正在处理,并且增加10秒可处理时间（60=>70=>80=>90）
+			//可用任务时间（超时10秒内仍有机会对任务进行响应），默认为30秒，任务每失败一次增加十秒可用时间
+			$maxtime=30+$task['times']*10;
 			self::$mysqli->query("update onprocess set uniqid='".$uniqid."', status=1, times=times+1, proctime=(SELECT unix_timestamp(now())),acktime=(SELECT unix_timestamp(now())+".$maxtime."), spider='".$GLOBALS['SPIDERNAME']."' where id=".$task['id']." and status=0 limit 1");
 		}
 		//如果获取到任务并且事务提交成功，则返回任务
@@ -49,7 +48,7 @@ class TaskManager {
 			//从队列中删除任务
 			self::$mysqli->query("delete from taskqueue where id=".$task['id']." limit 1");
 			//标记为正在处理
-			self::$mysqli->query("insert into onprocess values(null, '".$uniqid."','".$url."',".$task['level'].",".$task['time'].",".$task['type'].",(SELECT unix_timestamp(now())),(SELECT unix_timestamp(now())+60),1,1,'".$GLOBALS['SPIDERNAME']."')");
+			self::$mysqli->query("insert into onprocess values(null, '".$uniqid."','".$url."',".$task['level'].",".$task['time'].",".$task['type'].",(SELECT unix_timestamp(now())),(SELECT unix_timestamp(now())+30),1,1,'".$GLOBALS['SPIDERNAME']."')");
 		}
 		//如果获取到任务并且事务提交成功，则返回任务
 		if($task!=null && self::$mysqli->commit()){

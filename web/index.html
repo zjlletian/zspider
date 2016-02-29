@@ -91,13 +91,13 @@ function loadTasks(tasks){
 		taskbar=taskbar.replace('{$width}',tasks[i].cost/tasks[i].max*100).replace('{$times}',tasks[i].times);
 
 		//设置进度条颜色
-		if(tasks[i].cost<(0.15*tasks[i].max)){
+		if(tasks[i].cost<(0.2*tasks[i].max)){
 			taskbar=taskbar.replace('{$color}','success');
 		}
-		else if(tasks[i].cost<(0.5*tasks[i].max)){
+		else if(tasks[i].cost<(0.6*tasks[i].max)){
 			taskbar=taskbar.replace('{$color}','info');
 		}
-		else if(tasks[i].cost<(0.9*tasks[i].max)){
+		else if(tasks[i].cost<tasks[i].max){
 			taskbar=taskbar.replace('{$color}','warning');
 		}
 		else{
