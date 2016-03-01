@@ -50,10 +50,6 @@ class UrlAnalyzer{
 			//执行请求，对重定向地址循环执行，最大重定向次数5
 			for($loops=0; $loops<5; $loops++) {
 				$htmltext = curl_exec($ch);
-				if($istest){
-					echo "download:".(time()-$now)."s\n";
-					$now=time();
-				}
 				$responseheader = curl_getinfo($ch);
 				$response['url'] = $responseheader['url'];
 				$response['code'] = $responseheader['http_code'];
@@ -112,9 +108,12 @@ class UrlAnalyzer{
 				throw new Exception("too mach redirect.\n");
 			}
 
+			//下载时间
+			$response['timeinfo']['download']=time()-$now;
+			$now=time();
+
 			//判断是否访问成功
 			if(intval($response['code'])/100==2) {
-
 				//判断文档类型是否为text/html
 				$contentType = strtr(strtoupper($responseheader['content_type']), array(' '=>'','\t'=>'','@'=>''));
 				if(strpos($contentType,'TEXT/HTML')===false){
@@ -157,20 +156,16 @@ class UrlAnalyzer{
 					$response['code'] = 600;
 		    		throw new Exception("html is too long. (doc size=".strlen($htmltext).", max size=".$GLOBALS['MAX_HTMLSISE'].")");
 				}
-				if($istest){
-					echo "convert charset:".(time()-$now)."s\n";
-					$now=time();
-				}
 
 				//开始html解析
 				$response['html']=$htmltext;
 				$htmltext=str_ireplace("&amp;","&",$htmltext);
 				$htmldom= new simple_html_dom();
 				$htmldom->load($htmltext);
-				if($istest){
-					echo "load html:".(time()-$now)."s\n";
-					$now=time();
-				}
+				
+				//装载时间
+				$response['timeinfo']['loadhtml']=time()-$now;
+				$now=time();
 
 				//获取标题
 				$title=$htmldom->find('title',0);
@@ -179,10 +174,6 @@ class UrlAnalyzer{
 					throw new Exception("site has no title.");
 				}
 				$response['title']=trim($title->innertext);
-				if($istest){
-					echo "find title:".(time()-$now)."s\n";
-					$now=time();
-				}
 
 				//获取html中纯文本内容
 				$body=$htmldom->find('body',0);
@@ -190,20 +181,16 @@ class UrlAnalyzer{
 					$response['code'] = 600;
 					throw new Exception("site has no body.");
 				}
-				if($istest){
-					echo "find body:".(time()-$now)."s\n";
-					$now=time();
-				}
 				$text=self::htmlFilter($body->plaintext);
 				$response['text']=empty($text)?$response['title']:$text;
 
+				//提取信息
+				$response['timeinfo']['extarct']=time()-$now;
+				$now=time();
+
 				unset($body);
 				unset($text);
-				if($istest){
-					echo "get plaintext:".(time()-$now)."s\n";
-					$now=time();
-				}
-				
+
 				//解析网页中的超链接
 				$baseurl=self::urlSplit($response['url']);
 				$response['links']=array();
@@ -222,10 +209,8 @@ class UrlAnalyzer{
 						}
 			    	}
 			    }
-			    if($istest){
-					echo "find links:".(time()-$now)."s\n";
-					$now=time();
-				}
+			    //提取连接
+				$response['timeinfo']['findlinks']=time()-$now;
 
 				$htmldom->clear();
 				unset($htmldom);

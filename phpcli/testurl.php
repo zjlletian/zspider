@@ -1,18 +1,20 @@
 <?php
 require_once(dirname(dirname(__FILE__)).'/Config.php');
 
-$url=isset($argv[1])? $argv[1] : 'http://zjlup.com/';
-echo "============================= Time ==============================\n";
+$now=time();
+if(count($argv)<2){
+	die('not url argv.\n');
+}
+$url=$argv[1];
 $urlinfo=UrlAnalyzer::getInfoOnce($url,0,null,true);
-echo "\n";
 
 if(!isset($urlinfo['error'])){
-	echo "============================= UrlInfo ==============================\n";
 	echo "Url: ".$urlinfo['url']."\n";
 	echo "Title: ".$urlinfo['title']."\n";
 	echo "Charset: ".$urlinfo['charset']."\n";
 	echo "Html size: ".number_format(strlen($urlinfo['html'])/1024,1)."KB\n";
-	echo "Links count: ".count($urlinfo['links'])."\n\n";
+	echo "Links count: ".count($urlinfo['links'])."\n";
+	echo "Time: ".(time()-$now)."s ( download:".$urlinfo['timeinfo']['download']."s loadhtml:".$urlinfo['timeinfo']['loadhtml']."s extarct:".$urlinfo['timeinfo']['extarct']."s findhref:".$urlinfo['timeinfo']['findlinks']."s )\n\n";
 
 	if(isset($argv[2]) && $argv[2]=='show'){
 		echo "+--------------------------------------------------------------------------------------------------------------------------------------+\n";
@@ -23,7 +25,7 @@ if(!isset($urlinfo['error'])){
 		}
 		echo "+--------------------------------------------------------------------------------------------------------------------------------------+\n\n";
 
-		echo "============================== Text ==============================\n";
+		echo "--------------------------------------------------------------- Text ----------------------------------------------------------------\n";
 		echo $urlinfo['text']."\n\n";
 	}
 }

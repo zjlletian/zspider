@@ -45,6 +45,7 @@ class EsOpreator{
 	//保存urlinfo到ES
 	static function upsertUrlInfo($urlinfo){
 		$urlinfo['time'] = date("Y-m-d H:i:s",TaskManager::getServerTime());
+		unset($urlinfo['timeinfo']);
 		unset($urlinfo['code']);
 		unset($urlinfo['links']);
 		unset($urlinfo['level']);

@@ -95,6 +95,7 @@ class TaskHandler {
 			if(!isset($urlinfo['error'])){
 				$log['url']=$urlinfo['url'];
 				$log['level']=$urlinfo['level'];
+				$log['timeinfo']=$urlinfo['timeinfo'];
 				$logtype="success";
 			}
 			else{
