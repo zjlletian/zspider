@@ -2,12 +2,25 @@
 
 #帮助信息
 function showhelp(){
-	echo -e "List of valid commands:"
-	echo -e "start  :  start zspider by screen tool."
-	echo -e "stop   :  kill zspider screen and other progresses."
-	echo -e "restart:  same to run stop and start."
-	echo -e "screen :  same to run 'screen -r zspider'."
-	echo -e "status :  show running status of zspider.\n"
+echo -e "\033[36m
+   ______                  ___    ___
+  /___  /    _____ ____   /__/___/  /___   _____
+     / /    / ___// __ \ /  // __  // _ \ / ___/
+    / /___ (__  )/ /_/ //  // /_/ //  __// /
+   /_____//____// .___//__/ \____/ \___//_/
+               /_/
+\033[0m
+\033[33mUsage:\033[0m $(basename ${0}) [command]
+
+\033[33mAvailable commands:\033[0m
+\033[32mstart\033[0m     start zspider by screen tool.
+\033[32mstop\033[0m      kill zspider screen and other progresses.
+\033[32mrestart\033[0m   same to run stop and start.
+\033[32mscreen\033[0m    same to run 'screen -r zspider'.
+\033[32mstatus\033[0m    show running status of zspider.
+
+\033[36mCopyright (c) 2016, ZJLUP All rights reserved.\033[0m
+"
 }
 
 #启动Zspider
@@ -63,7 +76,6 @@ function status(){
 
 #检查参数个数
 if [ $# -ne 1 ];then
-	echo -e "Copyright (c) 2000-2016, ZJLUP All rights reserved.\n"
 	showhelp
 	exit 0
 fi
@@ -80,6 +92,6 @@ elif [ $1 = 'screen' ];then
 elif [ $1 = 'status' ];then
 	status
 else
-	echo -e "Command error. \c"
+	echo -e "\n\033[41;37mCommand error. This is help page: \033[0m"
 	showhelp
 fi
