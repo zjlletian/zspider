@@ -211,11 +211,15 @@ class UrlAnalyzer{
 			    	$href=self::transformHref($a->href, $baseurl);
 			    	if($href!=false){
 			    		if($istest){
-							$href="href：".$a->href.' link:'.$href;
+			    			if(!isset($response['links'][$a->href])){
+			    				$response['links'][$a->href]=$href;
+			    			}
 						}
-			    		if(!in_array($href,$response['links'])){
-			    			$response['links'][]=$href;
-			    		}
+						else{
+							if(!in_array($href,$response['links'])){
+			    				$response['links'][]=$href;
+			    			}
+						}
 			    	}
 			    }
 			    if($istest){

@@ -47,6 +47,7 @@ $GLOBALS['NOTTRACE_BEGIN'] = array(
 	'#',
 	'ftp:',
 	'file:',
+	'mailto:',
 	'javascript:'
 );
 
