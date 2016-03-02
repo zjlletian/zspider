@@ -146,4 +146,17 @@ class ESConnector {
 			return false;
 		}
 	}
+
+	//通过CURL方式查询
+	static function search_curl($index,$type,$body){
+		$data = $body;
+		$ch = curl_init ();
+		curl_setopt ( $ch, CURLOPT_URL,$GLOBALS['ELASTICSEARCH'][0].'/'.$index.'/'.$type.'/_search');
+		curl_setopt ( $ch, CURLOPT_POST, 1 );
+		curl_setopt ( $ch, CURLOPT_HEADER, 0 );
+		curl_setopt ( $ch, CURLOPT_RETURNTRANSFER, 1 );
+		curl_setopt ( $ch, CURLOPT_POSTFIELDS, json_encode($data) );
+		$json=curl_exec ( $ch );
+		return json_decode($json,true);
+	}
 }

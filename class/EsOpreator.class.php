@@ -76,10 +76,12 @@ class EsOpreator{
 	                        'type' => 'long'
 	                    ],
 	                    'type' => [
-	                        'type' => 'string'
+	                        'type' => 'string',
+	                        'index' => 'not_analyzed'
 	                    ],
 	                    'spider' => [
-	                        'type' => 'string'
+	                        'type' => 'string',
+	                        'index' => 'not_analyzed'
 	                    ],
 						'timeinfo' => [
 							'properties' => [
@@ -142,5 +144,68 @@ class EsOpreator{
 			self::creatLogIndex();
 		}
 		return EsConnector::insertDoc(self::$logindex,$logtype,$servertime.uniqid(),$log);
+	}
+
+	//获取日志统计
+	static function getLogCount($from, $to, $interval, $type){
+		$query=[
+			"query"=> [
+				"bool"=> [
+					"must"=> [
+						"range"=> [
+							"time"=> [
+								"gte"=>$from,
+								"lte"=>$to
+							]
+						]
+					]
+				]
+			],
+			"size" => 0,
+			"aggs" => [
+				"countbytime" => [
+					"date_histogram" => [
+						"field" => "time",
+						"interval" => $interval
+					],
+					"aggs" => [
+						"countbyspider" => [
+							"terms" => [
+								"field" => "spider"
+							]
+						]
+					]
+				]
+			]
+		];
+		return EsConnector::search('zspiderlog-*',$type,$query);
+	}
+
+	//获取文档数量
+	static function getDocCount($from, $to, $interval, $type){
+		$query=[
+			"query"=> [
+				"bool"=> [
+					"must"=> [
+						"range"=> [
+							"time"=> [
+								"gte"=>$from,
+								"lte"=>$to
+							]
+						]
+					]
+				]
+			],
+			"size" => 0,
+			"aggs" => [
+				"countbytime" => [
+					"date_histogram" => [
+						"field" => "time",
+						"interval" => $interval
+					]
+				]
+			]
+		];
+		return EsConnector::search('zspider',$type,$query);
 	}
 }
