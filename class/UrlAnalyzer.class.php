@@ -17,7 +17,7 @@ class UrlAnalyzer{
 
 	//获取url的信息：url:实际访问的地址，code:状态码，charset:原始字符编码，text:纯文本内容，html:网页快照内容，level:判定后的level，error:错误信息
 	static function getInfoOnce($url,$level,$referer=null,$istest=false){
-		$now=time();
+		$now=microtime(true); 
 		//设置curl
 		$ch = curl_init();
 		//curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
@@ -109,8 +109,8 @@ class UrlAnalyzer{
 			}
 
 			//下载时间
-			$response['timeinfo']['download']=time()-$now;
-			$now=time();
+			$response['timeinfo']['download']=round(microtime(true)-$now,3); 
+			$now=microtime(true);
 
 			//判断是否访问成功
 			if(intval($response['code'])/100==2) {
@@ -127,7 +127,7 @@ class UrlAnalyzer{
 					throw new Exception("empty html");
 				}
 
-				$now=time();
+				$now=microtime(true);
 				//使用ContentType获取字符编码，若未检出，则使用编码检测函数检测方式获取
 				$charset ='';
 				$validcharsets=array("UTF-8","GB2312","GBK","ISO-8859-1");
@@ -164,8 +164,8 @@ class UrlAnalyzer{
 				$htmldom->load($htmltext);
 				
 				//装载时间
-				$response['timeinfo']['loadhtml']=time()-$now;
-				$now=time();
+				$response['timeinfo']['loadhtml']=round(microtime(true)-$now,3);
+				$now=microtime(true);
 
 				//获取标题
 				$title=$htmldom->find('title',0);
@@ -185,8 +185,8 @@ class UrlAnalyzer{
 				$response['text']=empty($text)?$response['title']:$text;
 
 				//提取信息
-				$response['timeinfo']['extarct']=time()-$now;
-				$now=time();
+				$response['timeinfo']['extarct']=round(microtime(true)-$now,3);
+				$now=microtime(true);
 
 				unset($body);
 				unset($text);
@@ -210,7 +210,7 @@ class UrlAnalyzer{
 			    	}
 			    }
 			    //提取连接
-				$response['timeinfo']['findlinks']=time()-$now;
+				$response['timeinfo']['findlinks']=round(microtime(true)-$now,3);
 
 				$htmldom->clear();
 				unset($htmldom);

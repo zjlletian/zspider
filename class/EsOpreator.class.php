@@ -13,7 +13,7 @@ class EsOpreator{
 	    	'mappings' => [
 	            'websites' => [
 	                'properties' => [
-	                    'time' => [
+	                	'time' => [
 	                    	'format' => 'YYYY-MM-dd HH:mm:ss',
 	                        'type' => 'date'
 	                    ],
@@ -58,6 +58,10 @@ class EsOpreator{
 	//创建日志索引
 	private static function creatLogIndex(){
 		$paramsbody = [
+			'settings' => [
+				'number_of_shards' => 1,
+				'number_of_replicas' =>0
+	        ],
 	    	'mappings' => [
 	            '_default_' => [
 	                'properties' => [
@@ -76,13 +80,51 @@ class EsOpreator{
 	                    ],
 	                    'spider' => [
 	                        'type' => 'string'
-	                    ]
+	                    ],
+						'timeinfo' => [
+							'properties' => [
+								'total'=>[
+									'type' => 'float'
+								]
+							]
+						]
 	                ]
 	            ],
+	            'success' => [
+					'properties' => [
+					'timeinfo' => [
+						'properties' => [
+								'download'=>[
+									'type' => 'float'
+								],
+								'loadhtml'=>[
+									'type' => 'float'
+								],
+								'extarct'=>[
+									'type' => 'float'
+								],
+								'findlinks'=>[
+									'type' => 'float'
+								]
+							]
+						]
+					]
+				],
 	            'error' => [
 					'properties' => [
 						'error' => [
 							'type' => 'string'
+						]
+					]
+				],
+				'timeout' => [
+					'properties' => [
+						'timeinfo' => [
+							'properties' => [
+								'max'=>[
+									'type' => 'short'
+								]
+							]
 						]
 					]
 				]

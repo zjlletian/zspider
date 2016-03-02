@@ -64,7 +64,9 @@ class TaskHandler {
 
 	//执行爬虫任务
 	private static function handleTask($task){
-	
+		
+		$now=microtime(true);
+
 		//解析URL信息
 		$urlinfo=UrlAnalyzer::getInfo($task['url'],$task['level']);
 
@@ -90,24 +92,26 @@ class TaskHandler {
 		$log['type']=$task['type']==0? "New":"Update";
 		$log['level']=$task['level'];
 		$log['spider']=$task['spider'];
-
+		$totaltime=round(microtime(true)-$now,3);
 		if(TaskManager::submitTask($task,$urlinfo)){
 			if(!isset($urlinfo['error'])){
 				$log['url']=$urlinfo['url'];
 				$log['level']=$urlinfo['level'];
+				$urlinfo['timeinfo']['total']=
 				$log['timeinfo']=$urlinfo['timeinfo'];
+				$log['timeinfo']['total']=$totaltime;
 				$logtype="success";
 			}
 			else{
 				$log['error']=$urlinfo['error'];
+				$log['timeinfo']['total']=$totaltime;
 				$logtype="error";
 			}
 		}
 		else{
-			$dealtime = TaskManager::getServerTime()-$task['proctime'];
-			$maxtime = $task['acktime']-$task['proctime'];
-			$log['error']="submit refused, used ".$dealtime."s to handle this url but max time allowed is ".$maxtime."s.";
-			$logtype="error";
+			$log['timeinfo']['total']=$totaltime;
+			$log['timeinfo']['max']=$task['acktime']-$task['proctime'];
+			$logtype="timeout";
 		}
 		EsOpreator::putLog($log,$logtype);
 		unset($log);

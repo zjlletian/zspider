@@ -1,9 +1,9 @@
 <?php
 require_once(dirname(dirname(__FILE__)).'/Config.php');
 
-$now=time();
+$now=microtime(true);
 if(count($argv)<2){
-	die('not url argv.\n');
+	die("not url argv.\n");
 }
 $url=$argv[1];
 $urlinfo=UrlAnalyzer::getInfoOnce($url,0,null,true);
@@ -14,7 +14,7 @@ if(!isset($urlinfo['error'])){
 	echo "Charset: ".$urlinfo['charset']."\n";
 	echo "Html size: ".number_format(strlen($urlinfo['html'])/1024,1)."KB\n";
 	echo "Links count: ".count($urlinfo['links'])."\n";
-	echo "Time: ".(time()-$now)."s ( download:".$urlinfo['timeinfo']['download']."s loadhtml:".$urlinfo['timeinfo']['loadhtml']."s extarct:".$urlinfo['timeinfo']['extarct']."s findhref:".$urlinfo['timeinfo']['findlinks']."s )\n\n";
+	echo "Time: ".round(microtime(true)-$now,3)."s ( download:".$urlinfo['timeinfo']['download']."s loadhtml:".$urlinfo['timeinfo']['loadhtml']."s extarct:".$urlinfo['timeinfo']['extarct']."s findhref:".$urlinfo['timeinfo']['findlinks']."s )\n\n";
 
 	if(isset($argv[2]) && $argv[2]=='show'){
 		echo "+--------------------------------------------------------------------------------------------------------------------------------------+\n";

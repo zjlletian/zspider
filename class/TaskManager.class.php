@@ -28,15 +28,11 @@ class TaskManager {
 		$uniqid=uniqid();
 
 		//获取一个处理超时需要重新处理的任务
-		self::$mysqli->begin_transaction();
 		$task =mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where status=0 and times<4 limit 1"));
 		if($task!=null){
 			//可用任务时间（超时10秒内仍有机会对任务进行响应），默认为30秒，任务每失败一次增加十秒可用时间
 			$maxtime=30+$task['times']*10;
-			self::$mysqli->query("update onprocess set uniqid='".$uniqid."', status=1, times=times+1, proctime=(SELECT unix_timestamp(now())),acktime=(SELECT unix_timestamp(now())+".$maxtime."), spider='".$GLOBALS['SPIDERNAME']."' where id=".$task['id']." and status=0 limit 1");
-		}
-		//如果获取到任务并且事务提交成功，则返回任务
-		if($task!=null && self::$mysqli->commit()){
+			self::$mysqli->query("update onprocess set uniqid='".$uniqid."', status=1, times=times+1, proctime=(SELECT unix_timestamp(now())),acktime=(SELECT unix_timestamp(now())+".$maxtime."), spider='".$GLOBALS['SPIDERNAME']."' where uniqid='".$task['uniqid']."' limit 1");
 			return mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where uniqid='".$uniqid."' limit 1"));
 		}
 
@@ -51,7 +47,7 @@ class TaskManager {
 			self::$mysqli->query("insert into onprocess values(null, '".$uniqid."','".$url."',".$task['level'].",".$task['time'].",".$task['type'].",(SELECT unix_timestamp(now())),(SELECT unix_timestamp(now())+30),1,1,'".$GLOBALS['SPIDERNAME']."')");
 		}
 		//如果获取到任务并且事务提交成功，则返回任务
-		if($task!=null && self::$mysqli->commit()){
+		if(self::$mysqli->commit() && $task!=null){
 			return mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where uniqid='".$uniqid."' limit 1"));
 		}
 		return null;
@@ -69,7 +65,7 @@ class TaskManager {
 			Util::putErrorLog($str);
 			Util::echoRed("[".date("Y-m-d H:i:s")."] ".$str."\n");
 
-			$str="Message: Used ".$dealtime."s to handle this url but max time allowed is ".$maxtime."s.";
+			$str="Message: Used ".$dealtime."s to handle the task but allowed max time is ".$maxtime."s.";
 			Util::putErrorLog($str."\r\n");
 			Util::echoRed("[".date("Y-m-d H:i:s")."] ".$str."\n\n");
 			return false;
