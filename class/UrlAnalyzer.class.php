@@ -228,7 +228,6 @@ class UrlAnalyzer{
 			else{
 				$response['error']=$e->getMessage();
 			}
-			echo $e->getMessage();
 		}
 		curl_close($ch);
 		unset($ch);
