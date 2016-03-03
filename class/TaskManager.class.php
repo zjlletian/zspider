@@ -28,11 +28,13 @@ class TaskManager {
 		$uniqid=md5($GLOBALS['SPIDERNAME'].mt_rand(0,1000).uniqid());
 
 		//获取一个处理超时需要重新处理的任务，增加十秒可用时间
-		self::$mysqli->query("update onprocess set uniqid='".$uniqid."',status=1,times=times+1,proctime=(SELECT unix_timestamp(now())),acktime=(SELECT unix_timestamp(now())+times*10),spider='".$GLOBALS['SPIDERNAME']."' where status=0 and times<4 limit 1");
-		//如果存在任务就返回
-		$task =mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where uniqid='".$uniqid."'"));
+		$task =mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where status=0 and times<4 limit 1"));
 		if($task!=null){
-			return $task;
+			self::$mysqli->query("update onprocess set uniqid='".$uniqid."',status=1,times=times+1,proctime=(SELECT unix_timestamp(now())),acktime=(SELECT unix_timestamp(now())+30+times*10),spider='".$GLOBALS['SPIDERNAME']."' where id=".$task['id']." and status=0 limit 1");
+			$task =mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where uniqid='".$uniqid."'"));
+			if($task!=null){
+				return $task;
+			}
 		}
 
 		//从任务队列中获取任务（时间升序：广度优先遍历，深度越深队列数据量越大,查询速度变慢。时间降序：深度优先遍历，新任务马上处理，老任务积压）
