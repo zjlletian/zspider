@@ -23,32 +23,31 @@ class TaskManager {
 	}
 
 	//获取一个到达处理时间的爬虫任务
-	static function getTask(){
+	static function getTask($hash){
 
-		$uniqid=uniqid();
+		$uniqid=md5($GLOBALS['SPIDERNAME'].mt_rand(0,1000).uniqid());
 
-		//获取一个处理超时需要重新处理的任务
-		$task =mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where status=0 and times<4 limit 1"));
+		//获取一个处理超时需要重新处理的任务，增加十秒可用时间
+		self::$mysqli->query("update onprocess set uniqid='".$uniqid."',status=1,times=times+1,proctime=(SELECT unix_timestamp(now())),acktime=(SELECT unix_timestamp(now())+times*10),spider='".$GLOBALS['SPIDERNAME']."' where status=0 and times<4 limit 1");
+		//如果存在任务就返回
+		$task =mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where uniqid='".$uniqid."'"));
 		if($task!=null){
-			//可用任务时间（超时10秒内仍有机会对任务进行响应），默认为30秒，任务每失败一次增加十秒可用时间
-			$maxtime=30+$task['times']*10;
-			self::$mysqli->query("update onprocess set uniqid='".$uniqid."', status=1, times=times+1, proctime=(SELECT unix_timestamp(now())),acktime=(SELECT unix_timestamp(now())+".$maxtime."), spider='".$GLOBALS['SPIDERNAME']."' where uniqid='".$task['uniqid']."' limit 1");
-			return mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where uniqid='".$uniqid."' limit 1"));
+			return $task;
 		}
 
 		//从任务队列中获取任务（时间升序：广度优先遍历，深度越深队列数据量越大,查询速度变慢。时间降序：深度优先遍历，新任务马上处理，老任务积压）
-		self::$mysqli->begin_transaction();
-		$task =mysqli_fetch_assoc(self::$mysqli->query("select * from taskqueue where time<=(SELECT unix_timestamp(now())) order by time limit 1"));
+		$task =mysqli_fetch_assoc(self::$mysqli->query("select * from taskqueue where time<=(SELECT unix_timestamp(now())) order by time limit ".$hash.",1"));
 		if($task!=null){
+			self::$mysqli->begin_transaction();
 			$url=self::$mysqli->escape_string($task['url']);
 			//从队列中删除任务
 			self::$mysqli->query("delete from taskqueue where id=".$task['id']." limit 1");
 			//标记为正在处理
 			self::$mysqli->query("insert into onprocess values(null, '".$uniqid."','".$url."',".$task['level'].",".$task['time'].",".$task['type'].",(SELECT unix_timestamp(now())),(SELECT unix_timestamp(now())+30),1,1,'".$GLOBALS['SPIDERNAME']."')");
-		}
-		//如果获取到任务并且事务提交成功，则返回任务
-		if(self::$mysqli->commit() && $task!=null){
-			return mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where uniqid='".$uniqid."' limit 1"));
+
+			if(self::$mysqli->commit()){
+				return mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where uniqid='".$uniqid."' limit 1"));
+			}
 		}
 		return null;
 	}

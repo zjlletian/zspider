@@ -232,6 +232,7 @@ class UrlAnalyzer{
 		curl_close($ch);
 		unset($ch);
 		unset($htmltext);
+		phpQuery::$documents = array();
 		$response['level']=$level;
 	    return $response;
 	}

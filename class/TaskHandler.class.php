@@ -26,12 +26,12 @@ class TaskHandler {
 	static $dealingTask;
 
 	//创建爬虫子进程
-	static function createProgress() {
+	static function createProgress($hash) {
 		$pid = pcntl_fork();
 		if(!$pid) {
 			register_shutdown_function('fatalErrorHandler');
 			//error_reporting(0);
-			self::runTask();
+			self::runTask($hash);
 		}
 		else{
 			return $pid;
@@ -39,7 +39,7 @@ class TaskHandler {
 	}
 
 	//爬虫子进程
-	private static function runTask(){
+	private static function runTask($hash){
 		//连接到mysql中的任务队列
 		TaskManager::connect();
 
@@ -48,7 +48,7 @@ class TaskHandler {
 
 		//循环获取任务
 		while(true){
-		    $task=TaskManager::getTask();
+		    $task=TaskManager::getTask($hash);
 			if($task!=null){
 				self::$dealingTask=$task;
 				//设置单个最长任务时间，防止任务卡死（该函数时间不包括调用系统函数时间，调用数据库或sleep时间）
@@ -57,6 +57,8 @@ class TaskHandler {
 				set_time_limit(0);
 			}
 			else{
+				$hash=($hash+mt_rand(10,20))%300;
+				$hash=$hash>=300 ? 0:$hash;
 				sleep(2);
 			}
 		}

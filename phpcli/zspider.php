@@ -25,9 +25,12 @@ if(!$pid) {
 Util::echoYellow("[".date("Y-m-d H:i:s")."] Create progress for TaskHandler...\n");
 Util::putErrorLog("---------------------- Create progress for TaskHandler -----------------------");
 
+$hash=0;
+
 //批量创建爬虫进程
 for($count=1; $count<=$GLOBALS['MAX_PARALLEL']; $count++){
-	TaskHandler::createProgress();
+	TaskHandler::createProgress($hash);
+	$hash=($hash+mt_rand(10,20))%300;
 }
 Util::echoGreen("[".date("Y-m-d H:i:s")."] Create TaskHandler done, running TaskHandler progress:".$GLOBALS['MAX_PARALLEL']."\n\n");
 Util::putErrorLog("Create TaskHandler done, running TaskHandler progress:".$GLOBALS['MAX_PARALLEL']."\r\n");
@@ -36,8 +39,9 @@ Util::putErrorLog("Create TaskHandler done, running TaskHandler progress:".$GLOB
 for($count=1; $count<=$GLOBALS['MAX_PARALLEL']; $count++){
 	pcntl_wait($status);
 	Util::echoRed("[".date("Y-m-d H:i:s")."] One TaskHandler stoped. running TaskHandler progress:".($GLOBALS['MAX_PARALLEL']-$count)."\n");
-	if(!Util::isNetError()){
-		TaskHandler::createProgress();
+	if(!Util::isNetError()){	
+		TaskHandler::createProgress($hash);
+		$hash=($hash+mt_rand(10,20))%300;
 		$count--;
 		Util::echoYellow("[".date("Y-m-d H:i:s")."] Restart a TaskHandler. running TaskHandler progress:".($GLOBALS['MAX_PARALLEL']-$count)."\n\n");
 	}
