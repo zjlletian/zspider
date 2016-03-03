@@ -9,12 +9,6 @@ $url=$argv[1];
 $urlinfo=UrlAnalyzer::getInfoOnce($url,0,null,true);
 
 if(!isset($urlinfo['error'])){
-	echo "Url: ".$urlinfo['url']."\n";
-	echo "Title: ".$urlinfo['title']."\n";
-	echo "Charset: ".$urlinfo['charset']."\n";
-	echo "Html size: ".number_format(strlen($urlinfo['html'])/1024,1)."KB\n";
-	echo "Links count: ".count($urlinfo['links'])."\n";
-	echo "Time: ".round(microtime(true)-$now,3)."s ( download:".$urlinfo['timeinfo']['download']."s loadhtml:".$urlinfo['timeinfo']['loadhtml']."s extarct:".$urlinfo['timeinfo']['extarct']."s findhref:".$urlinfo['timeinfo']['findlinks']."s )\n\n";
 
 	if(isset($argv[2]) && $argv[2]=='show'){
 		echo "+--------------------------------------------------------------------------------------------------------------------------------------+\n";
@@ -28,6 +22,13 @@ if(!isset($urlinfo['error'])){
 		echo "--------------------------------------------------------------- Text ----------------------------------------------------------------\n";
 		echo $urlinfo['text']."\n\n";
 	}
+
+	echo "Url: ".$urlinfo['url']."\n";
+	echo "Title: ".$urlinfo['title']."\n";
+	echo "Charset: ".$urlinfo['charset']."\n";
+	echo "Html size: ".number_format(strlen($urlinfo['html'])/1024,1)."KB\n";
+	echo "Links count: ".count($urlinfo['links'])."\n";
+	echo "Time: ".round(microtime(true)-$now,3)."s ( download:".$urlinfo['timeinfo']['download']."s extarct:".$urlinfo['timeinfo']['extarct']."s findhref:".$urlinfo['timeinfo']['findlinks']."s )\n\n";
 }
 else{
 	Util::echoRed("Get Info failed: ".$url."\nError Message: ".$urlinfo['error']."\n\n");

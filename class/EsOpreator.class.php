@@ -77,11 +77,11 @@ class EsOpreator{
 	                    ],
 	                    'type' => [
 	                        'type' => 'string',
-	                        'index' => 'not_analyzed'
+	                        'index' => 'not_analyzed' //'new' or 'update'
 	                    ],
 	                    'spider' => [
 	                        'type' => 'string',
-	                        'index' => 'not_analyzed'
+	                        'index' => 'not_analyzed' //spider name
 	                    ],
 						'timeinfo' => [
 							'properties' => [
@@ -97,9 +97,6 @@ class EsOpreator{
 					'timeinfo' => [
 						'properties' => [
 								'download'=>[
-									'type' => 'float'
-								],
-								'loadhtml'=>[
 									'type' => 'float'
 								],
 								'extarct'=>[

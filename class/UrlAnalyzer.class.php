@@ -1,6 +1,6 @@
 <?php
 require_once(dirname(dirname(__FILE__)).'/Config.php');
-require_once('SimpleHtmlDom.php');
+require_once('phpQuery/phpQuery.php');
 
 class UrlAnalyzer{
 
@@ -148,6 +148,10 @@ class UrlAnalyzer{
 				}
 				elseif ($charset != "UTF-8"){
 					$htmltext = mb_convert_encoding($htmltext,'UTF-8',$charset);
+					$response['html']=mb_convert_encoding($htmltext,'UTF-8',$charset);
+				}
+				else{
+					$response['html']=$htmltext;
 				}
 				$response['charset']= $charset;
 
@@ -157,62 +161,60 @@ class UrlAnalyzer{
 		    		throw new Exception("html is too long. (doc size=".strlen($htmltext).", max size=".$GLOBALS['MAX_HTMLSISE'].")");
 				}
 
-				//开始html解析
-				$response['html']=$htmltext;
-				$htmltext=str_ireplace("&amp;","&",$htmltext);
-				$htmldom= new simple_html_dom();
-				$htmldom->load($htmltext);
-				
-				//装载时间
-				$response['timeinfo']['loadhtml']=round(microtime(true)-$now,3);
-				$now=microtime(true);
+				//使用phpQuery解析HTML
+				$htmltext = preg_replace(["'<script[^>]*?>.*?</script>'si","'<style[^>]*?>.*?</style>'si"]," ", $htmltext); //phpQuery不会过滤js与css，需要手动去除
+				$htmltext = str_ireplace("&amp;","&",$htmltext);
+
+				$htmldom= phpQuery::newDocument($htmltext);
 
 				//获取标题
-				$title=$htmldom->find('title',0);
+				$title=$htmldom['title'];
 				if($title==null){
 					$response['code'] = 600;
 					throw new Exception("site has no title.");
 				}
-				$response['title']=trim($title->innertext);
+				$response['title']=trim($title->text());
 
 				//获取html中纯文本内容
-				$body=$htmldom->find('body',0);
+				$body=$htmldom['body'];
 				if($body==null){
 					$response['code'] = 600;
 					throw new Exception("site has no body.");
 				}
-				$text=self::htmlFilter($body->plaintext);
+				$text=self::textFilter($body->text());
 				$response['text']=empty($text)?$response['title']:$text;
-
-				//提取信息
-				$response['timeinfo']['extarct']=round(microtime(true)-$now,3);
-				$now=microtime(true);
 
 				unset($body);
 				unset($text);
 
-				//解析网页中的超链接
-				$baseurl=self::urlSplit($response['url']);
-				$response['links']=array();
-				foreach ($htmldom->find('a') as $a) {
-			    	$href=self::transformHref($a->href, $baseurl);
-			    	if($href!=false){
-			    		if($istest){
-			    			if(!isset($response['links'][$a->href])){
-			    				$response['links'][$a->href]=$href;
-			    			}
-						}
-						else{
-							if(!in_array($href,$response['links'])){
-			    				$response['links'][]=$href;
-			    			}
-						}
-			    	}
-			    }
-			    //提取连接
-				$response['timeinfo']['findlinks']=round(microtime(true)-$now,3);
+				//提取文本耗时
+				$response['timeinfo']['extarct']=round(microtime(true)-$now,3);
+				$now=microtime(true);
 
-				$htmldom->clear();
+				//解析网页中的超链接
+				$response['links']=array();
+				if($level>0 || $istest){
+					$baseurl=self::urlSplit($response['url']);
+					$response['links']=array();
+					foreach ($htmldom['a'] as $a) {
+						$href=$a-> getAttribute('href');
+				    	$link=self::transformHref($href, $baseurl);
+				    	if($href!=false){
+				    		if($istest){
+				    			if(!isset($response['links'][$href])){
+				    				$response['links'][$href]=$link;
+				    			}
+							}
+							else{
+								if(!in_array($link,$response['links'])){
+				    				$response['links'][]=$link;
+				    			}
+							}
+				    	}
+				    }
+			    }
+			    //解析超连接耗时
+				$response['timeinfo']['findlinks']=round(microtime(true)-$now,3);
 				unset($htmldom);
 			}
 			else{
@@ -226,6 +228,7 @@ class UrlAnalyzer{
 			else{
 				$response['error']=$e->getMessage();
 			}
+			echo $e->getMessage();
 		}
 		curl_close($ch);
 		unset($ch);
@@ -234,8 +237,8 @@ class UrlAnalyzer{
 	    return $response;
 	}
 
-	//过滤html内容
-	static function htmlFilter($htmltext){
+	//过滤text内容
+	static function textFilter($htmltext){
 
 		//去除多余的html标签
 		$htmltext=strip_tags($htmltext);
