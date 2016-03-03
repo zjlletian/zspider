@@ -114,58 +114,72 @@ class UrlAnalyzer{
 
 			//判断是否访问成功
 			if(intval($response['code'])/100==2) {
-				//判断文档类型是否为text/html
+
+				//根据contentType判断文档类型是否为text/html
 				$contentType = strtr(strtoupper($responseheader['content_type']), array(' '=>'','\t'=>'','@'=>''));
 				if(strpos($contentType,'TEXT/HTML')===false){
 					$response['code'] = 800;
 					throw new Exception("doctype is not html.");
 				}
 
-				//判断是否空内容
+				//判断网页是否为空
 				if(strlen($htmltext)==0){
 					$response['code'] = 600;
 					throw new Exception("empty html");
 				}
 
-				$now=microtime(true);
-				//使用ContentType获取字符编码，若未检出，则使用编码检测函数检测方式获取
-				$charset ='';
-				$validcharsets=array("UTF-8","GB2312","GBK","ISO-8859-1");
-				foreach (explode(";",$contentType) as $ct) {
-					$ctkv=explode("=",$ct);
-					if(count($ctkv)==2 && $ctkv[0]=='CHARSET'){
-						$charset=$ctkv[1];
-						break;
-					}
-				}
-				if(!in_array($charset,$validcharsets)){
-					$charset = mb_detect_encoding($htmltext,$validcharsets);
-				}
-				//如果未检测出字符编码则返回错误，否则字符集转换为UTF-8
-				if($charset ==''){
-					$response['code'] = 600;
-		    		throw new Exception("unknown charset.");
-				}
-				elseif ($charset != "UTF-8"){
-					$htmltext = mb_convert_encoding($htmltext,'UTF-8',$charset);
-				}
-				$response['charset']= $charset;
-				$response['html']=$htmltext;
-
-				//网页文件大小检测，避免内存溢出以及存入es过慢
+				//判断是网页是否过大，避免内存溢出以及存入es过慢
 				if(strlen($htmltext)>$GLOBALS['MAX_HTMLSISE']){
 					$response['code'] = 600;
 		    		throw new Exception("html is too long. (doc size=".strlen($htmltext).", max size=".$GLOBALS['MAX_HTMLSISE'].")");
 				}
 
-				//使用phpQuery解析HTML,phpQuery不会过滤js与css，需要手动去除
-				$htmltext = preg_replace(["'<script[^>]*?>.*?</script>'si","'<style[^>]*?>.*?</style>'si"]," ", $htmltext);
-				//phpQuery的自动检测编码容易出错，手动将Charset Meta标签替换为'utf-8'
-				$htmltext = preg_replace('@\s*<meta[^>]+http-equiv\\s*=\\s*(["|\'])Content-Type\\1([^>]+?)>@i', '<meta charset="utf-8">', $htmltext);
+				//获取字符编码
+				$response['html'] = $htmltext;
+				$charset ='';
+				$needconvert=true;
+				//从HtmlHead中的meta标签获取charset，pq默认方法，若不满足此方法，使用header或函数检测，避免pq出错
+				$metachs=self::contentTypeFromMeta($htmltext)[1];
+				if($metachs!=null){
+					$charset=strtoupper($metachs);
+					$needconvert=false;
+				}
+				else{
+					//使用HttpHeader中的ContentType获取chaeset
+					foreach (explode(";",$contentType) as $ct) {
+					$ctkv=explode("=",$ct);
+					if(count($ctkv)==2 && $ctkv[0]=='CHARSET'){
+							$charset=$ctkv[1];
+							break;
+						}
+					}
+					//使用函数检测charset
+					$validcharsets=array("UTF-8","GB2312","GBK","ISO-8859-1");
+					if(!in_array($charset,$validcharsets)){
+						$charset = mb_detect_encoding($htmltext,$validcharsets);
+					}
+				}
+				//如果未检测出字符编码则返回错误，否则字符集转换为UTF-8保存
+				if($charset ==''){
+					$response['code'] = 600;
+					throw new Exception("unknown charset.");
+				}
+				elseif($charset != "UTF-8"){
+					$response['html'] = mb_convert_encoding($htmltext,'UTF-8',$charset);
+					if($needconvert){
+						$htmltext=$response['html'];
+					}
+				}
+				$response['charset']=$charset;
+
+				//使用phpQuery解析HTML: phpQuery不会过滤js与css，需要手动去除。
+				$reg=array("'<script[^>]*?>.*?</script>'si", "'<style[^>]*?>.*?</style>'si");
+				$htmltext = preg_replace($reg," ", $htmltext);
+
 				//将&amp;替换成为&，防止连接中的参数出错
 				$htmltext = str_ireplace("&amp;","&",$htmltext);
-
 				$htmldom= phpQuery::newDocument($htmltext);
+				unset($htmltext);
 
 				//获取标题
 				$title=$htmldom['title'];
@@ -183,7 +197,6 @@ class UrlAnalyzer{
 				}
 				$text=self::textFilter($body->text());
 				$response['text']=empty($text)?$response['title']:$text;
-
 				unset($body);
 				unset($text);
 
@@ -231,10 +244,31 @@ class UrlAnalyzer{
 		}
 		curl_close($ch);
 		unset($ch);
-		unset($htmltext);
 		phpQuery::$documents = array();
 		$response['level']=$level;
 	    return $response;
+	}
+
+	//从meta中获取contentType数组：[ doctype , charset ]（从phpquery中提取）
+	static function contentTypeFromMeta($markup) {
+		$matches = array();
+		preg_match('@<meta[^>]+http-equiv\\s*=\\s*(["|\'])Content-Type\\1([^>]+?)>@i',$markup, $matches);
+		if (!isset($matches[0])){
+			return array(null, null);
+		}
+		preg_match('@content\\s*=\\s*(["|\'])(.+?)\\1@', $matches[0], $matches);
+		if (!isset($matches[0])){
+			return array(null, null);
+		}
+		$matches = explode(';', trim(strtolower(($matches[2]))));
+		if (isset($matches[1])) {
+			$matches[1] = explode('=', $matches[1]);
+			$matches[1] = isset($matches[1][1]) && trim($matches[1][1])?$matches[1][1]:$matches[1][0];
+		}
+		else{
+			$matches[1] = null;
+		}
+		return $matches;
 	}
 
 	//过滤text内容
