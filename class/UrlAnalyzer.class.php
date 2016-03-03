@@ -197,9 +197,9 @@ class UrlAnalyzer{
 					$baseurl=self::urlSplit($response['url']);
 					$response['links']=array();
 					foreach ($htmldom['a'] as $a) {
-						$href=$a-> getAttribute('href');
+						$href=$a->getAttribute('href');
 				    	$link=self::transformHref($href, $baseurl);
-				    	if($href!=false){
+				    	if($link!=false){
 				    		if($istest){
 				    			if(!isset($response['links'][$href])){
 				    				$response['links'][$href]=$link;
