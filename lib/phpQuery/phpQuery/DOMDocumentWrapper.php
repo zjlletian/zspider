@@ -386,7 +386,7 @@ class DOMDocumentWrapper {
 			.($xhtml ? '/' : '')
 			.'>';
 		if (strpos($html, '<head') === false) {
-			if (strpos($html, '<html') === false) {
+			if (strpos($hltml, '<html') === false) {
 				return $meta.$html;
 			} else {
 				return preg_replace(

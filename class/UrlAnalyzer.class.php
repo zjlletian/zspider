@@ -148,12 +148,9 @@ class UrlAnalyzer{
 				}
 				elseif ($charset != "UTF-8"){
 					$htmltext = mb_convert_encoding($htmltext,'UTF-8',$charset);
-					$response['html']=mb_convert_encoding($htmltext,'UTF-8',$charset);
-				}
-				else{
-					$response['html']=$htmltext;
 				}
 				$response['charset']= $charset;
+				$response['html']=$htmltext;
 
 				//网页文件大小检测，避免内存溢出以及存入es过慢
 				if(strlen($htmltext)>$GLOBALS['MAX_HTMLSISE']){
@@ -161,19 +158,22 @@ class UrlAnalyzer{
 		    		throw new Exception("html is too long. (doc size=".strlen($htmltext).", max size=".$GLOBALS['MAX_HTMLSISE'].")");
 				}
 
-				//使用phpQuery解析HTML
-				$htmltext = preg_replace(["'<script[^>]*?>.*?</script>'si","'<style[^>]*?>.*?</style>'si"]," ", $htmltext); //phpQuery不会过滤js与css，需要手动去除
+				//使用phpQuery解析HTML,phpQuery不会过滤js与css，需要手动去除
+				$htmltext = preg_replace(["'<script[^>]*?>.*?</script>'si","'<style[^>]*?>.*?</style>'si"]," ", $htmltext);
+				//phpQuery的自动检测编码容易出错，手动将Charset Meta标签替换为'utf-8'
+				$htmltext = preg_replace('@\s*<meta[^>]+http-equiv\\s*=\\s*(["|\'])Content-Type\\1([^>]+?)>@i', '<meta charset="utf-8">', $htmltext);
+				//将&amp;替换成为&，防止连接中的参数出错
 				$htmltext = str_ireplace("&amp;","&",$htmltext);
 
 				$htmldom= phpQuery::newDocument($htmltext);
 
 				//获取标题
 				$title=$htmldom['title'];
-				if($title==null){
+				$response['title']= $title==null? "":trim($title->text());
+				if($response['title']==''){
 					$response['code'] = 600;
 					throw new Exception("site has no title.");
 				}
-				$response['title']=trim($title->text());
 
 				//获取html中纯文本内容
 				$body=$htmldom['body'];
