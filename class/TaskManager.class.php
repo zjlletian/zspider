@@ -56,8 +56,9 @@ class TaskManager {
 	//提交任务执行结果
 	static function submitTask($task,$urlinfo){
 		$taskurl= mysqli_escape_string(self::$mycon,$task['url']);
+		$taskproc=mysqli_fetch_assoc( mysqli_query(self::$mycon,"select * from onprocess where url='{$taskurl}' limit 1"));
 		//检测任务是否已经被其他爬虫处理完毕
-		if(mysqli_fetch_assoc( mysqli_query(self::$mycon,"select * from onprocess where url='{$taskurl}' limit 1"))==null){
+		if($taskproc==null){
 			$dealtime = self::getServerTime()-$task['proctime'];
 			$maxtime = $task['acktime']-$task['proctime'];
 
@@ -65,7 +66,7 @@ class TaskManager {
 			Util::putErrorLog($str);
 			Util::echoRed("[".date("Y-m-d H:i:s")."] ".$str."\n");
 
-			$str="Message: Used ".$dealtime."s to handle the task but allowed max time is ".$maxtime."s.";
+			$str="Message: Task has been handled or removed.";
 			Util::putErrorLog($str."\r\n");
 			Util::echoRed("[".date("Y-m-d H:i:s")."] ".$str."\n\n");
 			return false;
