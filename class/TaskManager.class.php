@@ -55,9 +55,9 @@ class TaskManager {
 
 	//提交任务执行结果
 	static function submitTask($task,$urlinfo){
-
-		//检测任务是否已经移交给其他爬虫进程处理
-		if(mysqli_fetch_assoc( mysqli_query(self::$mycon,"select * from onprocess where uniqid='{$task['uniqid']}' limit 1"))==null){
+		$taskurl= mysqli_escape_string(self::$mycon,$task['url']);
+		//检测任务是否已经被其他爬虫处理完毕
+		if(mysqli_fetch_assoc( mysqli_query(self::$mycon,"select * from onprocess where url='{$taskurl}' limit 1"))==null){
 			$dealtime = self::getServerTime()-$task['proctime'];
 			$maxtime = $task['acktime']-$task['proctime'];
 
