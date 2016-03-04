@@ -59,7 +59,7 @@ class QueueWatcher {
 			$pid = pcntl_fork();
 			if(!$pid) {
 				self::connect();
-				self::handleNewLinks($count*50);
+				self::handleNewLinks($count*500);
 			}
 		}
 
