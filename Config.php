@@ -34,6 +34,8 @@ date_default_timezone_set('Asia/Shanghai');
 //最大并行任务数量
 $GLOBALS['MAX_PARALLEL']=30;
 
+$GLOBALS['MAX_PARALLEL_QUEUE']=30;
+
 //最大网页大小(B)
 $GLOBALS['MAX_HTMLSISE']=1024*2048;
 

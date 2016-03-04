@@ -46,7 +46,7 @@ class QueueWatcher {
 		}
 
 		//收集队列信息
-		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create Queueinfo collector...\n\n");
+		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create Queueinfo collector...\n");
 		$pid = pcntl_fork();
 		if(!$pid) {
 			self::connect();
@@ -54,12 +54,12 @@ class QueueWatcher {
 		}
 
 		//启动新链接转储进程
-		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create NewLinks transporter...\n");
-		for($count=0;$count<100;$count++){
+		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create NewLinks transporter...\n\n");
+		for($count=0;$count<$GLOBALS['MAX_PARALLEL_QUEUE'];$count++){
 			$pid = pcntl_fork();
 			if(!$pid) {
 				self::connect();
-				self::handleNewLinks($count*500);
+				self::handleNewLinks($count*$GLOBALS['MAX_PARALLEL_QUEUE']*5);
 			}
 		}
 
