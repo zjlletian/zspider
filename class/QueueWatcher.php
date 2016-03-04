@@ -63,7 +63,7 @@ class QueueWatcher {
 			}
 		}
 
-		while(ture){
+		while(true){
 			pcntl_wait($status);
 		}
 		Util::echoRed("[".date("Y-m-d H:i:s")."] QueueWatcher stoped..");
