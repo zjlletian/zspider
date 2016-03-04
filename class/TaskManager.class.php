@@ -3,23 +3,22 @@ require_once(dirname(dirname(__FILE__)).'/Config.php');
 
 class TaskManager {
 
-	//mysql连接
-	private static $mysqli;
+    //mysql连接
+    private static $mycon;
 
-	//连接到Mysql,如果是$ispcon为true模式则建立持久连接，否则建立短连接
-	static function connect($ispcon=true){
-		$host=$ispcon? "p:".$GLOBALS['MYSQL']['host'] : $GLOBALS['MYSQL']['host'];
-		self::$mysqli=new mysqli();
-		self::$mysqli->connect($GLOBALS['MYSQL']['host'],$GLOBALS['MYSQL']['user'],$GLOBALS['MYSQL']['passwd'],$GLOBALS['MYSQL']['db'],$GLOBALS['MYSQL']['port']);
-		if(self::$mysqli->connect_error!=null){
-			exit();
-		}
-		return true;
-	}
+    //连接到Mysql,如果是$ispcon为true模式则建立持久连接，否则建立短连接
+    static function connect($ispcon=true){
+        $host=$ispcon? "p:".$GLOBALS['MYSQL']['host'] : $GLOBALS['MYSQL']['host'];
+        self::$mycon=mysqli_connect($host,$GLOBALS['MYSQL']['user'],$GLOBALS['MYSQL']['passwd'],$GLOBALS['MYSQL']['db'],$GLOBALS['MYSQL']['port']);
+        if(mysqli_connect_error()!=null){
+            exit();
+        }
+        return true;
+    }
 
 	//获取服务器时间
 	static function getServerTime(){
-		return intval(mysqli_fetch_assoc(self::$mysqli->query("select unix_timestamp(now()) as time"))['time']);
+		return intval(mysqli_fetch_assoc(mysqli_query(self::$mycon,"select unix_timestamp(now()) as time"))['time']);
 	}
 
 	//获取一个到达处理时间的爬虫任务
@@ -28,27 +27,27 @@ class TaskManager {
 		$uniqid=md5($GLOBALS['SPIDERNAME'].mt_rand(0,1000).uniqid());
 
 		//获取一个处理超时需要重新处理的任务，增加十秒可用时间
-		$task =mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where status=0 and times<4 limit 1"));
+		$task =mysqli_fetch_assoc(mysqli_query(self::$mycon,"select * from onprocess where status=0 and times<4 limit 1"));
 		if($task!=null){
-			self::$mysqli->query("update onprocess set uniqid='".$uniqid."',status=1,times=times+1,proctime=(SELECT unix_timestamp(now())),acktime=(SELECT unix_timestamp(now())+30+times*10),spider='".$GLOBALS['SPIDERNAME']."' where id=".$task['id']." and status=0 limit 1");
-			$task =mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where uniqid='".$uniqid."'"));
+            mysqli_query(self::$mycon,"update onprocess set uniqid='{$uniqid}',status=1,times=times+1,proctime=(SELECT unix_timestamp(now())),acktime=(SELECT unix_timestamp(now())+30+times*10),spider='{$GLOBALS['SPIDERNAME']}' where id={$task['id']} and status=0 limit 1");
+			$task =mysqli_fetch_assoc(mysqli_query(self::$mycon,"select * from onprocess where uniqid='{$uniqid}'"));
 			if($task!=null){
 				return $task;
 			}
 		}
 
 		//从任务队列中获取任务（时间升序：广度优先遍历，深度越深队列数据量越大,查询速度变慢。时间降序：深度优先遍历，新任务马上处理，老任务积压）
-		$task =mysqli_fetch_assoc(self::$mysqli->query("select * from taskqueue where time<=(SELECT unix_timestamp(now())) order by time limit ".$hash.",1"));
+		$task =mysqli_fetch_assoc(mysqli_query(self::$mycon,"select * from taskqueue where time<=(SELECT unix_timestamp(now())) order by time limit {$hash},1"));
 		if($task!=null){
-			self::$mysqli->begin_transaction();
-			$url=self::$mysqli->escape_string($task['url']);
+            mysqli_begin_transaction(self::$mycon);
+			$url= mysqli_escape_string(self::$mycon,$task['url']);
 			//从队列中删除任务
-			self::$mysqli->query("delete from taskqueue where id=".$task['id']." limit 1");
+            mysqli_query(self::$mycon,"delete from taskqueue where id={$task['id']} limit 1");
 			//标记为正在处理
-			self::$mysqli->query("insert into onprocess values(null, '".$uniqid."','".$url."',".$task['level'].",".$task['time'].",".$task['type'].",(SELECT unix_timestamp(now())),(SELECT unix_timestamp(now())+30),1,1,'".$GLOBALS['SPIDERNAME']."')");
+            mysqli_query(self::$mycon,"insert into onprocess values(null,'{$uniqid}','{$url}',{$task['level']},{$task['time']},{$task['type']},(SELECT unix_timestamp(now())),(SELECT unix_timestamp(now())+30),1,1,'{$GLOBALS['SPIDERNAME']}')");
 
-			if(self::$mysqli->commit()){
-				return mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where uniqid='".$uniqid."' limit 1"));
+			if(mysqli_commit(self::$mycon)){
+				return mysqli_fetch_assoc( mysqli_query(self::$mycon,"select * from onprocess where uniqid='{$uniqid}' limit 1"));
 			}
 		}
 		return null;
@@ -58,7 +57,7 @@ class TaskManager {
 	static function submitTask($task,$urlinfo){
 
 		//检测任务是否已经移交给其他爬虫进程处理
-		if(mysqli_fetch_assoc(self::$mysqli->query("select * from onprocess where uniqid='".$task['uniqid']."' limit 1"))==null){
+		if(mysqli_fetch_assoc( mysqli_query(self::$mycon,"select * from onprocess where uniqid='{$task['uniqid']}' limit 1"))==null){
 			$dealtime = self::getServerTime()-$task['proctime'];
 			$maxtime = $task['acktime']-$task['proctime'];
 
@@ -71,40 +70,45 @@ class TaskManager {
 			Util::echoRed("[".date("Y-m-d H:i:s")."] ".$str."\n\n");
 			return false;
 		}
-		
-		//对执行结果分配更新任务
-		if(!isset($urlinfo['error'])){
-			self::addUpdateTask($urlinfo['url'],$urlinfo['level']);
-		}
-		//从正在执行的任务中移除
-		self::$mysqli->query("delete from onprocess where id=".$task['id']);
+
+        //对执行结果分配更新任务,如果保存到ES失败,则继续处理
+        if(!isset($urlinfo['error'])){
+            self::addUpdateTask($urlinfo['url'],$urlinfo['level']);
+        }
+
+         //从正在执行的任务中移除
+        mysqli_query(self::$mycon,"delete from onprocess where id=".$task['id']);
 
 		//当level>0时，将连接加入队列，否则记录错误
 		if(!isset($urlinfo['error'])){
 			if($urlinfo['level']>0 && count($urlinfo['links'])>0){
 				foreach ($urlinfo['links'] as $url) {
-					$url=self::$mysqli->escape_string($url);
-					self::$mysqli->query("insert into newlinks values(null,'".$url."',".($urlinfo['level']-1).")");
+					$url= mysqli_escape_string(self::$mycon,$url);
+                    $level=$urlinfo['level']-1;
+					mysqli_query(self::$mycon,"insert into newlinks values(null,'{$url}',{$level})");
 				}
 			}
 		}
 		else{
-			$taskurl =self::$mysqli->escape_string($task['url']);
+			$taskurl = mysqli_escape_string(self::$mycon,$task['url']);
 			if($urlinfo['code']==0){
-				self::$mysqli->query("replace into errortask values(null,'".$taskurl."',(SELECT unix_timestamp(now())+3600*24*100))"); //连接错误，100天后清理
+                mysqli_query(self::$mycon,"replace into errortask values(null,'{$taskurl}',(SELECT unix_timestamp(now())+3600*24*100))"); //连接错误，100天后清理
 			}
 			else if($urlinfo['code']<500){
-				self::$mysqli->query("replace into errortask values(null,'".$taskurl."',(SELECT unix_timestamp(now())+3600*24*80))"); //http错误，80天后清理
+                mysqli_query(self::$mycon,"replace into errortask values(null,'{$taskurl}',(SELECT unix_timestamp(now())+3600*24*80))"); //http错误，80天后清理
 			}
 			else if(500<=$urlinfo['code'] && $urlinfo['code']<600){
-				self::$mysqli->query("replace into errortask values(null,'".$taskurl."',(SELECT unix_timestamp(now())+3600*24*50))"); //服务器错误，50天后清理
+                mysqli_query(self::$mycon,"replace into errortask values(null,'{$taskurl}',(SELECT unix_timestamp(now())+3600*24*50))"); //服务器错误，50天后清理
 			}
 			else if(600<=$urlinfo['code'] && $urlinfo['code']<700){
-				self::$mysqli->query("replace into errortask values(null,'".$taskurl."',(SELECT unix_timestamp(now())+3600*24*50))"); //内容错误，50天后清理
+                mysqli_query(self::$mycon,"replace into errortask values(null,'{$taskurl}',(SELECT unix_timestamp(now())+3600*24*50))"); //内容错误，50天后清理
 			}
 			else if($urlinfo['code']==800){
-				self::$mysqli->query("insert ignore into notupdate values(null,'".$taskurl."')"); //非html加入到notupdate
+                mysqli_query(self::$mycon,"insert ignore into notupdate values(null,'{$taskurl}')"); //非html类型
 			}
+            else if($urlinfo['code']==900){
+                mysqli_query(self::$mycon,"insert ignore into notupdate values(null,'{$taskurl}')"); //存入ES错误
+            }
 		}
 		return true;
 	}
@@ -112,13 +116,13 @@ class TaskManager {
 	//对执行结果分配更新任务
 	private static function addUpdateTask($url,$level){
 		$urlbak=$url;
-		$url=self::$mysqli->escape_string($url);
+		$url= mysqli_escape_string(self::$mycon,$url);
 
 		//排除不更新的连接
 		foreach ($GLOBALS['NOTUPDATE_HAS'] as $notupdate) {
 			if(strpos($urlbak,$notupdate) !== false ){
 				//添加到不更新列表中
-				self::$mysqli->query("insert ignore into notupdate values(null,'".$url."'");
+                mysqli_query(self::$mycon,"insert ignore into notupdate values(null,'{$url}')");
 				return 'will not update';
 			}
 		}
@@ -134,28 +138,28 @@ class TaskManager {
 				$updatetime=time()+$GLOBALS['SITE_UPDATE'][$urlbak]['time'];
 			}
 		}
-		self::$mysqli->query("insert ignore into taskqueue values(null,'".$url."',".$level.",".$updatetime.",1)");
+        mysqli_query(self::$mycon,"insert ignore into taskqueue values(null,'{$url}',{$level},{$updatetime},1)");
 		return date("Y-m-d H:i:s",$updatetime);
 	}
 
 	//判断地址是否需要处理,用于redirect后的地址判断，返回处理等级，-1不需要
 	static function isHandled($url,$level) {
-		$url=self::$mysqli->escape_string($url);
+		$url= mysqli_escape_string(self::$mycon,$url);
 
 		//忽略正在处理的链接
-		if(self::$mysqli->query("select * from onprocess where url='".$url."' limit 1")->num_rows>0){
+		if( mysqli_query(self::$mycon,"select * from onprocess where url='{$url}' limit 1")->num_rows>0){
 			return -1;
 		}
 		//忽略存在于不更新列表中的链接
-		if(self::$mysqli->query("select * from notupdate where url='".$url."' limit 1")->num_rows>0){
+		if( mysqli_query(self::$mycon,"select * from notupdate where url='{$url}' limit 1")->num_rows>0){
 			return -2;
 		}
 		//忽略标记为错误的链接
-		if(self::$mysqli->query("select * from errortask where url='".$url."' limit 1")->num_rows>0){
+		if( mysqli_query(self::$mycon,"select * from errortask where url='{$url}' limit 1")->num_rows>0){
 			return -3;
 		}
 
-		$result = self::$mysqli->query("select * from taskqueue where url='".$url."' limit 1");
+		$result = mysqli_query(self::$mycon,"select * from taskqueue where url='{$url}' limit 1");
 		$task=mysqli_fetch_assoc($result);
 		$result->free();
 
@@ -164,11 +168,11 @@ class TaskManager {
 			return $level;
 		}
 		else if($task['type']=='0' && $task['level']<$level){
-			self::$mysqli->query("delete from taskqueue where id=".$task['id']." limit 1");
+            mysqli_query(self::$mycon,"delete from taskqueue where id={$task['id']} limit 1");
 			return $task['level']>$level?$task['level']:$level;
 		}
 		else if($task['type']=='0' && $task['level']<$level){
-			self::$mysqli->query("update taskqueue set level=".$level." where id=".$task['id']." limit 1");
+            mysqli_query(self::$mycon,"update taskqueue set level={$level} where id={$task['id']} limit 1");
 			return -1;
 		}
 		return -1;

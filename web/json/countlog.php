@@ -7,8 +7,8 @@ $to=isset($_GET['to'])?$_GET['to'] : date("Y-m-d H:i:s",time());
 $interval=isset($_GET['intv'])?$_GET['intv'] : '1h';
 $type=isset($_GET['type'])?$_GET['type'] : 'success';
 
-EsConnector::connect();
-$logcount=EsOpreator::getLogCount($from, $to, $interval, $type);
+Dashboard::useES();
+$logcount=Dashboard::getLogCount($from, $to, $interval, $type);
 
 $result=['total'=>$logcount['hits']['total'], 'interval'=>array()];
 foreach ($logcount['aggregations']["countbytime"]["buckets"] as $timeinterval) {

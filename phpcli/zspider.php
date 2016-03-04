@@ -16,6 +16,12 @@ if(Util::isNetError()){
 	exit();
 }
 
+//检查ES是否可以连接
+if(!EsOpreator::testConnect()){
+	Util::putErrorLog("Start failed, can not connect to elasticsearch.\r\n");
+	exit();
+}
+
 //报告爬虫状态
 $pid = pcntl_fork();
 if(!$pid) {
@@ -39,7 +45,8 @@ Util::putErrorLog("Create TaskHandler done, running TaskHandler progress:".$GLOB
 for($count=1; $count<=$GLOBALS['MAX_PARALLEL']; $count++){
 	pcntl_wait($status);
 	Util::echoRed("[".date("Y-m-d H:i:s")."] One TaskHandler stoped. running TaskHandler progress:".($GLOBALS['MAX_PARALLEL']-$count)."\n");
-	if(!Util::isNetError()){	
+	//在网络正常以及ES连接正常
+	if(!Util::isNetError() && EsOpreator::testConnect()){
 		TaskHandler::createProgress($hash);
 		$hash=($hash+mt_rand(10,20))%300;
 		$count--;
@@ -60,7 +67,7 @@ function reportSpider(){
 		curl_setopt ( $ch, CURLOPT_HEADER, 0 );
 		curl_setopt ( $ch, CURLOPT_RETURNTRANSFER, 1 );
 		curl_setopt ( $ch, CURLOPT_POSTFIELDS, $data );
-		$return = curl_exec ( $ch );
+		curl_exec ( $ch );
 		sleep(20);
 	}
 }

@@ -1,25 +1,6 @@
 <?php
 require_once(dirname(dirname(__FILE__)).'/Config.php');
 
-//捕获fatalError
-function fatalErrorHandler(){
-	$types=array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR);
-	$e = error_get_last();
-	if(in_array($e['type'],$types)){
-		$str="Fatal Error, url: ".TaskHandler::$dealingTask['url'];
-		Util::putErrorLog($str);
-		Util::echoRed("[".date("Y-m-d H:i:s")."] ".$str."\n");
-
-		$str="Message: ".$e['message'];
-		Util::putErrorLog($str);
-		Util::echoRed("[".date("Y-m-d H:i:s")."] ".$str."\n");
-
-		$str="File: ".$e['file']." (line ".$e['line'].")";
-		Util::putErrorLog($str."\r\n");
-		Util::echoRed("[".date("Y-m-d H:i:s")."] ".$str."\n\n");
-	}
-}
-
 class TaskHandler {
 
 	//正在处理的任务
@@ -75,18 +56,42 @@ class TaskHandler {
 		//如果返回状态为0，则检查网络
 		if($urlinfo['code']==0){
 			if(Util::isNetError()){
-				$str="TaskHandler stop, url: ".self::$dealingTask['url'];
-				Util::putErrorLog($str);
-				$str="Message: Network is error.\r\n";
-				Util::putErrorLog($str);
+				Util::putErrorLog("TaskHandler stop, url: ".self::$dealingTask['url']);
+				Util::putErrorLog("Message: Network is error.\r\n");
 				Util::echoRed("[".date("Y-m-d H:i:s")."] Network Error on dealing with ".TaskHandler::$dealingTask['url']."\n");
 				exit();
 			}
 		}
 
-		//保存url信息到ES
+		//保存url信息到ES,最多尝试五次
 		if(!isset($urlinfo['error'])){
-			EsOpreator::upsertUrlInfo($urlinfo);
+            $savesuc=false;
+            for($count=0;$count<5;$count++){
+                $savesuc=EsOpreator::upsertUrlInfo($urlinfo)!=false;
+                if($savesuc){
+                    break;
+                }
+            }
+			if($savesuc==false){
+                if(!EsOpreator::testConnect()){
+                    Util::putErrorLog("TaskHandler stop, url: ".self::$dealingTask['url']);
+                    Util::putErrorLog("Message: Elasticsearch disconnect.\r\n");
+                    Util::echoRed("[".date("Y-m-d H:i:s")."] Elasticsearch disconnect on dealing with ".TaskHandler::$dealingTask['url']."\n\n");
+                    exit();
+                }
+                else{
+                    $str="Save url info to elasticsearch failed, url: ".$task['url'];
+                    Util::putErrorLog($str);
+                    Util::echoRed("[".date("Y-m-d H:i:s")."] ".$str."\n");
+
+                    $str="Message: Save url info to elasticsearch failed.";
+                    Util::putErrorLog($str."\r\n");
+                    Util::echoRed("[".date("Y-m-d H:i:s")."] ".$str."\n\n");
+
+                    $urlinfo['error']='Save url info to elasticsearch failed.';
+                    $urlinfo['code']=900;
+                }
+            }
 		}
 
 		//提交任务执行结果,记录日志到ES
@@ -99,7 +104,6 @@ class TaskHandler {
 			if(!isset($urlinfo['error'])){
 				$log['url']=$urlinfo['url'];
 				$log['level']=$urlinfo['level'];
-				$urlinfo['timeinfo']['total']=
 				$log['timeinfo']=$urlinfo['timeinfo'];
 				$log['timeinfo']['total']=$totaltime;
 				$logtype="success";
@@ -118,5 +122,24 @@ class TaskHandler {
 		EsOpreator::putLog($log,$logtype);
 		unset($log);
 		unset($urlinfo);
+	}
+}
+
+//捕获fatalError
+function fatalErrorHandler(){
+	$types=array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR);
+	$e = error_get_last();
+	if(in_array($e['type'],$types)){
+		$str="Fatal Error, url: ".TaskHandler::$dealingTask['url'];
+		Util::putErrorLog($str);
+		Util::echoRed("[".date("Y-m-d H:i:s")."] ".$str."\n");
+
+		$str="Message: ".$e['message'];
+		Util::putErrorLog($str);
+		Util::echoRed("[".date("Y-m-d H:i:s")."] ".$str."\n");
+
+		$str="File: ".$e['file']." (line ".$e['line'].")";
+		Util::putErrorLog($str."\r\n");
+		Util::echoRed("[".date("Y-m-d H:i:s")."] ".$str."\n\n");
 	}
 }

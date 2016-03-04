@@ -2,10 +2,9 @@
 require_once(dirname(dirname(dirname(__FILE__))).'/Config.php');
 header('Content-type:text/json;charset:utf-8');
 
-
-QueueWatcher::connect(false);
-$queueinfo=QueueWatcher::getQueueInfo();
-$spiders = QueueWatcher::getSpiders();
+Dashboard::useMysql();
+$queueinfo=Dashboard::getQueueInfo();
+$spiders = Dashboard::getSpiders();
 
 //队列信息
 $onprocess = array();

@@ -6,12 +6,23 @@ class EsOpreator{
 	//保存日志的index名称
 	private static $logindex;
 
+	//测试是否连接到ES
+	static function testConnect(){
+		EsConnector::connect();
+		$testquery=[
+			"query"=>[
+				"match_all"=>[]
+			]
+		];
+		return ESConnector::search("","",$testquery)!=false;
+	}
+
 	//初始化index
 	static function initIndex(){
 		EsConnector::connect();
 		$paramsbody = [
 	    	'mappings' => [
-	            'websites' => [
+	            'html' => [
 	                'properties' => [
 	                	'time' => [
 	                    	'format' => 'YYYY-MM-dd HH:mm:ss',
@@ -143,68 +154,5 @@ class EsOpreator{
 			self::creatLogIndex();
 		}
 		return EsConnector::insertDoc(self::$logindex,$logtype,$servertime.uniqid(),$log);
-	}
-
-	//获取日志统计
-	static function getLogCount($from, $to, $interval, $type){
-		$query=[
-			"query"=> [
-				"bool"=> [
-					"must"=> [
-						"range"=> [
-							"time"=> [
-								"gte"=>$from,
-								"lte"=>$to
-							]
-						]
-					]
-				]
-			],
-			"size" => 0,
-			"aggs" => [
-				"countbytime" => [
-					"date_histogram" => [
-						"field" => "time",
-						"interval" => $interval
-					],
-					"aggs" => [
-						"countbyspider" => [
-							"terms" => [
-								"field" => "spider"
-							]
-						]
-					]
-				]
-			]
-		];
-		return EsConnector::search('zspiderlog-*',$type,$query);
-	}
-
-	//获取文档数量
-	static function getDocCount($from, $to, $interval, $type){
-		$query=[
-			"query"=> [
-				"bool"=> [
-					"must"=> [
-						"range"=> [
-							"time"=> [
-								"gte"=>$from,
-								"lte"=>$to
-							]
-						]
-					]
-				]
-			],
-			"size" => 0,
-			"aggs" => [
-				"countbytime" => [
-					"date_histogram" => [
-						"field" => "time",
-						"interval" => $interval
-					]
-				]
-			]
-		];
-		return EsConnector::search('zspider',$type,$query);
 	}
 }
