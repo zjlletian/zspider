@@ -134,15 +134,11 @@ class UrlAnalyzer{
 		    		throw new Exception("html is too long. (doc size=".strlen($htmltext).", max size=".$GLOBALS['MAX_HTMLSISE'].")");
 				}
 
-				//获取字符编码
-				$response['html'] = $htmltext;
+				//如果能够从HtmlHead中的meta标签获取charset则直接交给pq处理，否则使用header或函数检测charset并转换为utf-8
 				$charset ='';
-				$needconvert=true;
-				//从HtmlHead中的meta标签获取charset，pq默认方法，若不满足此方法，使用header或函数检测，避免pq出错
 				$metachs=self::contentTypeFromMeta($htmltext)[1];
 				if($metachs!=null){
 					$charset=strtoupper($metachs);
-					$needconvert=false;
 				}
 				else{
 					//使用HttpHeader中的ContentType获取chaeset
@@ -158,26 +154,25 @@ class UrlAnalyzer{
 					if(!in_array($charset,$validcharsets)){
 						$charset = mb_detect_encoding($htmltext,$validcharsets);
 					}
-				}
-				//如果未检测出字符编码则返回错误，否则字符集转换为UTF-8保存
-				if($charset ==''){
-					$response['code'] = 600;
-					throw new Exception("unknown charset.");
-				}
-				elseif($charset != "UTF-8"){
-					$response['html'] = mb_convert_encoding($htmltext,'UTF-8',$charset);
-					if($needconvert){
-						$htmltext=$response['html'];
+					//如果未检测出字符编码则返回错误，否则字符集转换为UTF-8
+					if($charset ==''){
+						$response['code'] = 600;
+						throw new Exception("unknown charset.");
+					}
+					elseif($charset != "UTF-8"){
+						$htmltext = mb_convert_encoding($htmltext,'UTF-8',$charset);
 					}
 				}
 				$response['charset']=$charset;
 
-				//使用phpQuery解析HTML: phpQuery不会过滤js与css，需要手动去除。
+				//phpQuery不会过滤js与css，需要手动去除。
 				$reg=array("'<script[^>]*?>.*?</script>'si", "'<style[^>]*?>.*?</style>'si");
 				$htmltext = preg_replace($reg," ", $htmltext);
 
 				//将&amp;替换成为&，防止连接中的参数出错
 				$htmltext = str_ireplace("&amp;","&",$htmltext);
+
+				//使用phpQuery解析dom
 				$htmldom= phpQuery::newDocument($htmltext);
 				unset($htmltext);
 

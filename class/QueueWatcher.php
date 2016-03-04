@@ -37,16 +37,6 @@ class QueueWatcher {
 			self::handleAck();
 		}
 
-		//启动新链接转储进程
-		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create NewLinks transporter...\n");
-		for($count=0;$count<10;$count++){
-			$pid = pcntl_fork();
-			if(!$pid) {
-				self::connect();
-				self::handleNewLinks($count*50);
-			}
-		}
-
 		//启动删除过期错误进程
 		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create ErrorLinks Watcher...\n");
 		$pid = pcntl_fork();
@@ -63,7 +53,19 @@ class QueueWatcher {
 			self::queueinfoCollector();
 		}
 
-		pcntl_wait($status);
+		//启动新链接转储进程
+		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create NewLinks transporter...\n");
+		for($count=0;$count<100;$count++){
+			$pid = pcntl_fork();
+			if(!$pid) {
+				self::connect();
+				self::handleNewLinks($count*50);
+			}
+		}
+
+		while(ture){
+			pcntl_wait($status);
+		}
 		Util::echoRed("[".date("Y-m-d H:i:s")."] QueueWatcher stoped..");
 	}
 

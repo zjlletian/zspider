@@ -27,13 +27,15 @@ class EsOpreator{
 	                        'type' => 'long'
 	                    ],
 	                    'charset' => [
-	                        'type' => 'string'
+	                        'type' => 'string',
+	                        'index' => 'not_analyzed'
 	                    ],
 	                    'text' => [
 	                        'type' => 'string'
 	                    ],
-	                    'html' => [
-	                        'type' => 'string'
+	                    'md5' => [
+	                        'type' => 'string', //md5 of html
+	                        'index' => 'not_analyzed'
 	                    ]
 	                ]
 	            ]
@@ -49,10 +51,10 @@ class EsOpreator{
 		unset($urlinfo['code']);
 		unset($urlinfo['links']);
 		unset($urlinfo['level']);
-		unset($urlinfo['html']);//不存储快照，减少es存储空间
+		$urlinfo['md5']=md5($urlinfo['text']);
 		$upsert = $urlinfo;
 		$upsert['view'] = 0;
-		return EsConnector::updateDocByDoc('zspider','websites',md5($urlinfo['url']),$urlinfo,$upsert);
+		return EsConnector::updateDocByDoc('zspider','html',md5($urlinfo['url']),$urlinfo,$upsert);
 	}
 
 	//创建日志索引
@@ -76,12 +78,12 @@ class EsOpreator{
 	                        'type' => 'long'
 	                    ],
 	                    'type' => [
-	                        'type' => 'string',
-	                        'index' => 'not_analyzed' //'new' or 'update'
+	                        'type' => 'string', //'new' or 'update'
+	                        'index' => 'not_analyzed'
 	                    ],
 	                    'spider' => [
-	                        'type' => 'string',
-	                        'index' => 'not_analyzed' //spider name
+	                        'type' => 'string', //spider name
+	                        'index' => 'not_analyzed'
 	                    ],
 						'timeinfo' => [
 							'properties' => [
