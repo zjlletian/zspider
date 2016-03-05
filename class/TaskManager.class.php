@@ -29,7 +29,7 @@ class TaskManager {
 		//获取一个处理超时需要重新处理的任务，每增加一个level或者失败一次增加十秒可用时间
 		$task =mysqli_fetch_assoc(mysqli_query(self::$mycon,"select * from onprocess where status=0 and times<4 limit 1"));
 		if($task!=null){
-            mysqli_query(self::$mycon,"update onprocess set uniqid='{$uniqid}',status=1,times=times+1,proctime=(SELECT unix_timestamp(now())),acktime=(SELECT unix_timestamp(now())+30+times*10+level*10),spider='{$GLOBALS['SPIDERNAME']}' where id={$task['id']} and status=0 limit 1");
+            mysqli_query(self::$mycon,"update onprocess set uniqid='{$uniqid}',status=1,times=times+1,proctime=(SELECT unix_timestamp(now())),acktime=(SELECT unix_timestamp(now())+60+times*10+level*10),spider='{$GLOBALS['SPIDERNAME']}' where id={$task['id']} and status=0 limit 1");
 			$task =mysqli_fetch_assoc(mysqli_query(self::$mycon,"select * from onprocess where uniqid='{$uniqid}'"));
 			if($task!=null){
 				return $task;
@@ -44,7 +44,7 @@ class TaskManager {
 			//从队列中删除任务
             mysqli_query(self::$mycon,"delete from taskqueue where id={$task['id']} limit 1");
 			//标记为正在处理
-            mysqli_query(self::$mycon,"insert into onprocess values(null,'{$uniqid}','{$url}',{$task['level']},{$task['time']},{$task['type']},(SELECT unix_timestamp(now())),(SELECT unix_timestamp(now())+30+{$task['level']}*10),1,1,'{$GLOBALS['SPIDERNAME']}')");
+            mysqli_query(self::$mycon,"insert into onprocess values(null,'{$uniqid}','{$url}',{$task['level']},{$task['time']},{$task['type']},(SELECT unix_timestamp(now())),(SELECT unix_timestamp(now())+60+{$task['level']}*10),1,1,'{$GLOBALS['SPIDERNAME']}')");
 
 			if(mysqli_commit(self::$mycon)){
 				return mysqli_fetch_assoc( mysqli_query(self::$mycon,"select * from onprocess where uniqid='{$uniqid}' limit 1"));
@@ -59,9 +59,6 @@ class TaskManager {
 		$taskproc=mysqli_fetch_assoc( mysqli_query(self::$mycon,"select * from onprocess where url='{$taskurl}' limit 1"));
 		//检测任务是否已经被其他爬虫处理完毕
 		if($taskproc==null){
-			$dealtime = self::getServerTime()-$task['proctime'];
-			$maxtime = $task['acktime']-$task['proctime'];
-
 			$str="Submit refused, url: ".$task['url'];
 			Util::putErrorLog($str);
 			Util::echoRed("[".date("Y-m-d H:i:s")."] ".$str."\n");
@@ -83,11 +80,14 @@ class TaskManager {
 		//当level>0时，将连接加入队列，否则记录错误
 		if(!isset($urlinfo['error'])){
 			if($urlinfo['level']>0 && count($urlinfo['links'])>0){
+				//$sql="";
+				$level=$urlinfo['level']-1;
 				foreach ($urlinfo['links'] as $url) {
 					$url= mysqli_escape_string(self::$mycon,$url);
-                    $level=$urlinfo['level']-1;
-					mysqli_query(self::$mycon,"insert into newlinks values(null,'{$url}',{$level})");
+					$sql="insert into newlinks values(null,'{$url}',{$level});";
+					mysqli_query(self::$mycon,$sql);
 				}
+				//mysqli_multi_query(self::$mycon,$sql);
 			}
 		}
 		else{

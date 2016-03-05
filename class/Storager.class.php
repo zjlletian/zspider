@@ -1,21 +1,10 @@
 <?php
 require_once(dirname(dirname(__FILE__)).'/Config.php');
 
-class EsOpreator{
+class Storager{
 
 	//保存日志的index名称
 	private static $logindex;
-
-	//测试是否连接到ES
-	static function testConnect(){
-		EsConnector::connect();
-		$testquery=[
-			"query"=>[
-				"match_all"=>[]
-			]
-		];
-		return ESConnector::search("","",$testquery)!=false;
-	}
 
 	//初始化index
 	static function initIndex(){
@@ -45,7 +34,7 @@ class EsOpreator{
 	                        'type' => 'string'
 	                    ],
 	                    'md5' => [
-	                        'type' => 'string', //md5 of html
+	                        'type' => 'string',
 	                        'index' => 'not_analyzed'
 	                    ]
 	                ]
@@ -53,19 +42,6 @@ class EsOpreator{
 	        ]
 		];
 		return EsConnector::createIndex('zspider', $paramsbody);
-	}
-
-	//保存urlinfo到ES
-	static function upsertUrlInfo($urlinfo){
-		$urlinfo['time'] = date("Y-m-d H:i:s",TaskManager::getServerTime());
-		unset($urlinfo['timeinfo']);
-		unset($urlinfo['code']);
-		unset($urlinfo['links']);
-		unset($urlinfo['level']);
-		$urlinfo['md5']=md5($urlinfo['text']);
-		$upsert = $urlinfo;
-		$upsert['view'] = 0;
-		return EsConnector::updateDocByDoc('zspider','html',md5($urlinfo['url']),$urlinfo,$upsert);
 	}
 
 	//创建日志索引
@@ -83,17 +59,19 @@ class EsOpreator{
 	                        'type' => 'date'
 	                    ],
 	                    'url' => [
-	                        'type' => 'string'
+	                        'type' => 'string',
+	                        'index' => 'not_analyzed'
 	                    ],
 	                    'level' => [
-	                        'type' => 'long'
+	                        'type' => 'long',
+	                        'index' => 'not_analyzed'
 	                    ],
 	                    'type' => [
-	                        'type' => 'string', //'new' or 'update'
+	                        'type' => 'string',
 	                        'index' => 'not_analyzed'
 	                    ],
 	                    'spider' => [
-	                        'type' => 'string', //spider name
+	                        'type' => 'string',
 	                        'index' => 'not_analyzed'
 	                    ],
 						'timeinfo' => [
@@ -109,6 +87,9 @@ class EsOpreator{
 					'properties' => [
 					'timeinfo' => [
 						'properties' => [
+								'gettask'=>[
+									'type' => 'float'
+								],
 								'download'=>[
 									'type' => 'float'
 								],
@@ -116,6 +97,9 @@ class EsOpreator{
 									'type' => 'float'
 								],
 								'findlinks'=>[
+									'type' => 'float'
+								],
+								'saveinfo'=>[
 									'type' => 'float'
 								]
 							]
@@ -128,21 +112,23 @@ class EsOpreator{
 							'type' => 'string'
 						]
 					]
-				],
-				'timeout' => [
-					'properties' => [
-						'timeinfo' => [
-							'properties' => [
-								'max'=>[
-									'type' => 'short'
-								]
-							]
-						]
-					]
 				]
 	        ]
 		];
 		return EsConnector::createIndex(self::$logindex, $paramsbody);
+	}
+
+	//保存urlinfo到ES
+	static function upsertUrlInfo($urlinfo){
+		$urlinfo['time'] = date("Y-m-d H:i:s",TaskManager::getServerTime());
+		unset($urlinfo['timeinfo']);
+		unset($urlinfo['code']);
+		unset($urlinfo['links']);
+		unset($urlinfo['level']);
+		$urlinfo['md5']=md5($urlinfo['text']);
+		$upsert = $urlinfo;
+		$upsert['view'] = 0;
+		return EsConnector::updateDocByDoc('zspider','html',md5($urlinfo['url']),$urlinfo,$upsert);
 	}
 
 	//记录日志

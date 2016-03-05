@@ -13,7 +13,8 @@ echo -e "\033[36m
 \033[33mUsage:\033[0m $(basename ${0}) [command]
 
 \033[33mAvailable commands:\033[0m
-\033[32mstart\033[0m     start zspider by screen tool.
+\033[32mdebug\033[0m     start zspider and show debug info.
+\033[32mstart\033[0m     start zspider in screen model.
 \033[32mstop\033[0m      kill zspider screen and other progresses.
 \033[32mrestart\033[0m   same to run stop and start.
 \033[32mscreen\033[0m    same to run 'screen -r zspider'.
@@ -23,14 +24,18 @@ echo -e "\033[36m
 "
 }
 
+#检查Zspider是否已经存在
+function check(){
+    ps aux | awk '/zspider\.php/ && !/awk/ { print $0 >> "zspider.run"; }'
+   	if [ -f zspider.run ];then
+   		echo -e "ZSpider exists, start failed."
+   		rm zspider.run -f
+   		exit 0
+   	fi
+}
+
 #启动Zspider
 function start(){
-	ps aux | awk '/zspider\.php/ && !/awk/ { print $0 >> "zspider.run"; }'
-	if [ -f zspider.run ];then
-		echo -e "ZSpider exists, start failed."
-		rm zspider.run -f
-		exit 0
-	fi
 	screen -dmS zspider php $(cd `dirname $0`; cd ../; pwd)/phpcli/zspider.php byscreen
 	echo -e "ZSpider is now runing."
 }
@@ -80,7 +85,11 @@ if [ $# -ne 1 ];then
 	exit 0
 fi
 
-if [ $1 = 'start' ];then
+if [ $1 = 'debug' ];then
+    check
+	php $(cd `dirname $0`; cd ../; pwd)/phpcli/zspider.php debug
+elif [ $1 = 'start' ];then
+    check
 	start
 elif [ $1 = 'stop' ];then
 	stop

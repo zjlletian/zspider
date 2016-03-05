@@ -14,6 +14,16 @@ class ESConnector {
 		return true;
 	}
 
+	//测试是否连接到ES
+	static function testConnect(){
+		$testquery=[
+			"query"=>[
+				"match_all"=>[]
+			]
+		];
+		return self::search("","",$testquery)!=false;
+	}
+
 	//创建Index
 	static function createIndex($indexname,$body=null){
 		try{
@@ -89,6 +99,19 @@ class ESConnector {
 		}
 	}
 
+	//插document curl方式
+	static function insertDoc_curl($index,$type,$id,$docbody){
+		$data = $docbody;
+		$ch = curl_init ();
+		curl_setopt ( $ch, CURLOPT_URL,"{$GLOBALS['ELASTICSEARCH'][0]}/{$index}/{$type}/{$id}");
+		curl_setopt ( $ch, CURLOPT_POST, 1 );
+		curl_setopt ( $ch, CURLOPT_HEADER, 0 );
+		curl_setopt ( $ch, CURLOPT_RETURNTRANSFER, 1 );
+		curl_setopt ( $ch, CURLOPT_POSTFIELDS, json_encode($data) );
+		$json=curl_exec ( $ch );
+		return json_decode($json,true);
+	}
+
 	//更新document
 	static function updateDocByDoc($index,$type,$id,$docbody,$upsert=null){
 		try{
@@ -132,7 +155,7 @@ class ESConnector {
 		}
 	}
 
-	//复杂查询
+	//查询
 	static function search($index,$type,$body){
 		try{
 			$params = [
@@ -147,11 +170,11 @@ class ESConnector {
 		}
 	}
 
-	//通过CURL方式查询
+	//查询（CURL方式）
 	static function search_curl($index,$type,$body){
 		$data = $body;
 		$ch = curl_init ();
-		curl_setopt ( $ch, CURLOPT_URL,$GLOBALS['ELASTICSEARCH'][0].'/'.$index.'/'.$type.'/_search');
+		curl_setopt ( $ch, CURLOPT_URL,"{$GLOBALS['ELASTICSEARCH'][0]}/{$index}/{$type}/_search");
 		curl_setopt ( $ch, CURLOPT_POST, 1 );
 		curl_setopt ( $ch, CURLOPT_HEADER, 0 );
 		curl_setopt ( $ch, CURLOPT_RETURNTRANSFER, 1 );

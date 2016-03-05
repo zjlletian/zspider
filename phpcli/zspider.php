@@ -1,10 +1,14 @@
 <?php
 require_once(dirname(dirname(__FILE__)).'/Config.php');
 
-//检查是否以screen运行
-if(count($argv)<2 || $argv[1]!='byscreen'){
-	Util::echoRed("Please run ZSpider '".APPROOT."/bin/qwatcher start'\n");
+//检查是否以screen或者debug运行
+if(count($argv)<2 || !($argv[1]=='byscreen' || $argv[1]=='debug')){
+	Util::echoRed("Please run ZSpider '".APPROOT."/bin/qwatcher start|debug '\n");
 	exit();
+}
+$GLOBALS['DEBUG']=false;
+if($argv[1]=='debug'){
+	$GLOBALS['DEBUG']=true;
 }
 
 //重命名旧的日志文件
@@ -17,7 +21,8 @@ if(Util::isNetError()){
 }
 
 //检查ES是否可以连接
-if(!EsOpreator::testConnect()){
+ESConnector::connect();
+if(!ESConnector::testConnect()){
 	Util::putErrorLog("Start failed, can not connect to elasticsearch.\r\n");
 	exit();
 }
@@ -46,7 +51,7 @@ for($count=1; $count<=$GLOBALS['MAX_PARALLEL']; $count++){
 	pcntl_wait($status);
 	Util::echoRed("[".date("Y-m-d H:i:s")."] One TaskHandler stoped. running TaskHandler progress:".($GLOBALS['MAX_PARALLEL']-$count)."\n");
 	//在网络正常以及ES连接正常
-	if(!Util::isNetError() && EsOpreator::testConnect()){
+	if(!Util::isNetError() && ESConnector::testConnect()){
 		TaskHandler::createProgress($hash);
 		$hash=($hash+mt_rand(10,20))%300;
 		$count--;

@@ -6,6 +6,7 @@ class UrlAnalyzer{
 
 	//对url尝试3次获取信息
 	static function getInfo($url,$level){
+		$response=null;
 		for($count=1; $count<=3; $count++){
 			$response=self::getInfoOnce($url,$level);
 			if(!isset($response['error']) || $response['code']>=600){

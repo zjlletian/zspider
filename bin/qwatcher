@@ -13,7 +13,7 @@ echo -e "\033[36m
 \033[33mUsage:\033[0m $(basename ${0}) [command]
 
 \033[33mAvailable commands:\033[0m
-\033[32mstart\033[0m     start queue watcher by screen tool.
+\033[32mstart\033[0m     start queue watcher in screen model.
 \033[32mstop\033[0m      kill queue watcher screen and other progresses.
 \033[32mrestart\033[0m   same to run stop and start.
 \033[32mscreen\033[0m    same to run 'screen -r queue watcher'.

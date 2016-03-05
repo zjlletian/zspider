@@ -25,19 +25,23 @@ class TaskHandler {
 		TaskManager::connect();
 
 		//连接到ES,创建索引
-		EsOpreator::initIndex();
+		Storager::initIndex();
 
 		//循环获取任务
 		while(true){
+			$now=microtime(true);
 		    $task=TaskManager::getTask($hash);
 			if($task!=null){
 				self::$dealingTask=$task;
 				//设置单个最长任务时间，防止任务卡死（该函数时间不包括调用系统函数时间，调用数据库或sleep时间）
 				set_time_limit(120);
-				self::handleTask($task);
+				self::handleTask($task,$now);
 				set_time_limit(0);
 			}
 			else{
+				if($GLOBALS['DEBUG']){
+					echo "Get null task ,hash:".$hash."\n\n";
+				}
 				$hash=($hash+mt_rand(10,20))%300;
 				$hash=$hash>=300 ? 0:$hash;
 				sleep(2);
@@ -46,10 +50,8 @@ class TaskHandler {
 	}
 
 	//执行爬虫任务
-	private static function handleTask($task){
-		
-		$now=microtime(true);
-
+	private static function handleTask($task,$now){
+		$gettasktime=round(microtime(true)-$now,3);
 		//解析URL信息
 		$urlinfo=UrlAnalyzer::getInfo($task['url'],$task['level']);
 
@@ -64,16 +66,17 @@ class TaskHandler {
 		}
 
 		//保存url信息到ES,最多尝试五次
+		$savenow=microtime(true);
 		if(!isset($urlinfo['error'])){
             $savesuc=false;
             for($count=0;$count<5;$count++){
-                $savesuc=EsOpreator::upsertUrlInfo($urlinfo)!=false;
+				$savesuc=Storager::upsertUrlInfo($urlinfo)!=false;
                 if($savesuc){
                     break;
                 }
             }
 			if($savesuc==false){
-                if(!EsOpreator::testConnect()){
+                if(!ESConnector::testConnect()){
                     Util::putErrorLog("TaskHandler stop, url: ".self::$dealingTask['url']);
                     Util::putErrorLog("Message: Elasticsearch disconnect.\r\n");
                     Util::echoRed("[".date("Y-m-d H:i:s")."] Elasticsearch disconnect on dealing with ".TaskHandler::$dealingTask['url']."\n\n");
@@ -88,23 +91,29 @@ class TaskHandler {
                     Util::putErrorLog($str."\r\n");
                     Util::echoRed("[".date("Y-m-d H:i:s")."] ".$str."\n\n");
 
-                    $urlinfo['error']='Save url info to elasticsearch failed.';
+                    $urlinfo['error']='save url info to elasticsearch failed.';
                     $urlinfo['code']=900;
                 }
             }
 		}
+		$savetime=round(microtime(true)-$savenow,3);
+		$totaltime=round(microtime(true)-$now,3);
 
 		//提交任务执行结果,记录日志到ES
-		$log['url']=$task['url'];
-		$log['type']=$task['type']==0? "New":"Update";
-		$log['level']=$task['level'];
-		$log['spider']=$task['spider'];
-		$totaltime=round(microtime(true)-$now,3);
+		$submitnow=microtime(true);
 		if(TaskManager::submitTask($task,$urlinfo)){
+			$submittime=round(microtime(true)-$submitnow,3);
+			$lognow=microtime(true);
+			$log['url']=$task['url'];
+			$log['type']=$task['type']==0? "New":"Update";
+			$log['level']=$task['level'];
+			$log['spider']=$task['spider'];
 			if(!isset($urlinfo['error'])){
 				$log['url']=$urlinfo['url'];
 				$log['level']=$urlinfo['level'];
 				$log['timeinfo']=$urlinfo['timeinfo'];
+				$log['timeinfo']['gettask']=$gettasktime;
+				$log['timeinfo']['saveinfo']=$savetime;
 				$log['timeinfo']['total']=$totaltime;
 				$logtype="success";
 			}
@@ -113,13 +122,15 @@ class TaskHandler {
 				$log['timeinfo']['total']=$totaltime;
 				$logtype="error";
 			}
+			Storager::putLog($log,$logtype);
+			if(!isset($urlinfo['error']) && $GLOBALS['DEBUG']){
+				echo "Text:".round(strlen($urlinfo['text'])/1024,2)."KB Links:".count($urlinfo['links'])." Url: ".$task['url']."\n";
+				echo "Gettask:".$gettasktime."s download:".$urlinfo['timeinfo']['download']."s extarct:".$urlinfo['timeinfo']['extarct']."s findhref:".$urlinfo['timeinfo']['findlinks']."s saveinfo:".$savetime."s\n";
+				$logtime=round(microtime(true)-$lognow,3);
+				$sum=$totaltime+$submittime+$logtime;
+				echo "Proc:".$totaltime."s(".round($totaltime/$sum*100,1)."%) Submit:".$submittime."s(".round($submittime/$sum*100,1)."%) Log:".$logtime."s(".round($logtime/$sum*100,1)."%)\n\n";
+			}
 		}
-		else{
-			$log['timeinfo']['total']=$totaltime;
-			$log['timeinfo']['max']=$task['acktime']-$task['proctime'];
-			$logtype="timeout";
-		}
-		EsOpreator::putLog($log,$logtype);
 		unset($log);
 		unset($urlinfo);
 	}
