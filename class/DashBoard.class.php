@@ -21,51 +21,57 @@ class Dashboard{
     //爬虫状态报告（用于爬虫post）
     static function spiderReport($name,$ip){
         mysqli_query(self::$mycon,"replace into spiders values(null,'{$name}','{$ip}',(SELECT unix_timestamp(now())))");
-        return  '1';
+        return  array("status"=>1);
     }
 
     //获取队列信息
     static function getQueueInfo(){
-        $queueinfo=array('onprocess'=>array(),'spiders'=>array());
-
-        //正在执行的任务
-        $result= mysqli_query(self::$mycon,"select * from onprocess order by proctime");
-        while($task=mysqli_fetch_assoc($result)){
-            $queueinfo['onprocess'][]=$task;
-        }
-        $result->free();
-
-        //正在执行任务的爬虫
-        $result= mysqli_query(self::$mycon,"select spider,count(*) as tasks from onprocess where status=1 group by spider");
-        while($task=mysqli_fetch_assoc($result)){
-            $queueinfo['spiders'][]=$task;
-        }
-        $result->free();
-
         $queueinfo['new']=mysqli_fetch_assoc(mysqli_query(self::$mycon,"select value from queueinfo where item='new'"))['value'];
         $queueinfo['update_now']=mysqli_fetch_assoc( mysqli_query(self::$mycon,"select value from queueinfo where item='update_now'"))['value'];
+
+        //爬虫正在执行的任务数量
+        $spidertask=array();
+        $result= mysqli_query(self::$mycon,"select spider,count(*) as tasks from onprocess where status=1 group by spider");
+        while($task=mysqli_fetch_assoc($result)){
+            $spidertask[]=$task;
+        }
+        $result->free();
+
+        //在线爬虫信息 (60秒内有报告信息的爬虫)
+        $queueinfo['spiders']=array();
+        $result=mysqli_query(self::$mycon,"select * from spiders where acktime>(SELECT unix_timestamp(now())-60)");
+        while($spider=mysqli_fetch_assoc($result)){
+            $spider['tasks']=0;
+            foreach ($spidertask as $st) {
+                if($spider['name']==$st['spider']){
+                    $spider['tasks']=$st['tasks'];
+                }
+            }
+            $queueinfo['spiders'][]=$spider;
+        }
+        $result->free();
 
         return $queueinfo;
     }
 
-    //在线爬虫列表:获取60秒内有报告信息的爬虫（三次报告时间）
-    static function getSpiders(){
-        $spiders=array();
-        $result=mysqli_query(self::$mycon,"select * from spiders where acktime>(SELECT unix_timestamp(now())-60)");
-        while($spider=mysqli_fetch_assoc($result)){
-            $spider['tasks']=0;
-            $spiders[]=$spider;
+    //正在执行的任务列表
+    static function getTasklist(){
+        $tasklist=array();
+
+        $result= mysqli_query(self::$mycon,"select * from onprocess order by proctime");
+        while($task=mysqli_fetch_assoc($result)){
+            $tasklist[]=$task;
         }
         $result->free();
-        return $spiders;
+        return  $tasklist;
     }
 
     //获取日志统计
     static function getLogCount($from, $to, $interval, $type){
         $query=[
             "query"=> [
-                "bool"=> [
-                    "must"=> [
+                "bool"=> [ //filtered
+                    "must"=> [ //filter
                         "range"=> [
                             "time"=> [
                                 "gte"=>$from,
@@ -89,6 +95,11 @@ class Dashboard{
                             ]
                         ]
                     ]
+                ],
+                "countbytype"=>[
+                    "terms" => [
+                        "field" => "type"
+                    ]
                 ]
             ]
         ];
@@ -96,7 +107,7 @@ class Dashboard{
     }
 
     //获取文档数量
-    static function getDocCount($from, $to, $interval, $type){
+    static function getDocCount($from, $to, $interval, $doctype){
         $query=[
             "query"=> [
                 "bool"=> [
@@ -120,6 +131,6 @@ class Dashboard{
                 ]
             ]
         ];
-        return EsConnector::search('zspider',$type,$query);
+        return EsConnector::search('zspider',$doctype,$query);
     }
 }
