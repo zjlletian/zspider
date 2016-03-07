@@ -69,6 +69,7 @@ $GLOBALS['NOTTRACE_HAS'] = array(
 
 //默认更新周期
 $GLOBALS['UPDATE_TIME'] = array(
+	'5'=> 3600*24*1,
 	'4'=> 3600*24*2,
 	'3'=> 3600*24*3,
 	'2'=> 3600*24*7,
@@ -90,12 +91,13 @@ $GLOBALS['NOTUPDATE_HAS'] = array(
 
 //默认起点站点
 $GLOBALS['DEFAULT_SITE'] = array(
-	array('url'=>'https://www.baidu.com/','level'=>3),
-	array('url'=>'http://www.sina.com.cn/','level'=>3),
-	array('url'=>'http://baike.baidu.com/','level'=>2),
-	array('url'=>'http://www.ifeng.com/','level'=>2),
-	array('url'=>'http://www.163.com/','level'=>2),
+	array('url'=>'https://www.baidu.com/','level'=>4),
+	array('url'=>'http://www.sina.com.cn/','level'=>4),
+	array('url'=>'http://www.qq.com/','level'=>4),
+	array('url'=>'http://www.ifeng.com/','level'=>3),
+	array('url'=>'http://www.163.com/','level'=>3),
 	array('url'=>'http://www.csdn.net/','level'=>2),
 	array('url'=>'http://www.guokr.com/','level'=>2),
-	array('url'=>'http://www.csdn.net/','level'=>2)
+	array('url'=>'http://www.zol.com.cn/','level'=>2),
+	array('url'=>'http://www.mi.com/','level'=>2)
 );

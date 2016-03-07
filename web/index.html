@@ -5,49 +5,61 @@
 	<meta charset="UTF-8">
 	<link rel="stylesheet" href="//cdn.bootcss.com/bootstrap/3.3.5/css/bootstrap.min.css">
 	<link rel="stylesheet" href="//cdn.bootcss.com/bootstrap/3.3.5/css/bootstrap-theme.min.css">
+	<link rel="stylesheet" href="//cdn.bootcss.com/bootstrap/3.3.5/css/bootstrap-theme.min.css">
+	<link rel="stylesheet" href="/css/docs.min.css">
 	<link rel="stylesheet" href="/css/style.css">
 </head>
 
 <body>
-<div class="container">
+<div class="container-fluid" style="width:95%">
 	<div class="row">
 		<div class="col-md-4">
 			<div class="row">
 				<div class="col-md-12">
-					<h2>ZSpider DashBoard</h2>
+					<h2>&nbsp;ZSpider DashBoard</h2>
 				</div>
 			</div>
-			<div class="row">
+			<div class="row bs-callout bs-callout-info" style="padding-bottom: 0; ">
 				<div class="col-md-12">
-					<h3>队列任务信息</h3>
-					<table class="table" id="queueinfo">
-						<tr><td>待爬取新网页数量</td><td id="newtask">loading</td></tr>
-						<tr><td>需要更新网页数量</td><td id="updatetask">loading</td></tr>
-					</table>
-				</div>
-			</div>
-			<div class="row">
-				<div class="col-md-12">
-					<h3>文档数量信息</h3>
+					<h4  style="display:inline;">文档数量信息</h4>&nbsp;&nbsp;
+					<button type="button" class="btn btn-info btn-xs hbtn" onclick="showdoc()">文档更新日志</button><br><br>
 					<table class="table">
-						<tr><td>已存文档总量</td><td id="totaldoc">loading</td></tr>
+						<tr><td style="width:200px;">已存文档总量</td><td id="totaldoc">loading</td></tr>
 						<tr><td>今日新增总量</td><td id="todaynew">loading</td></tr>
 						<tr><td>今日更新总量</td><td id="todayupdate">loading</td></tr>
 					</table>
 					<div id="tasklog"></div>
 				</div>
 			</div>
-			<div class="row">
+			<div class="row bs-callout bs-callout-warning" style="padding-bottom: 0; ">
 				<div class="col-md-12">
-					<h3 id='spidercount'>在线爬虫列表 : loading </h3>
+					<h4  style="display:inline;">队列任务信息</h4>&nbsp;&nbsp;
+					<button type="button" class="btn btn-warning btn-xs hbtn" onclick="showqueue()">队列任务控制</button><br><br>
+					<table class="table" id="queueinfo">
+						<tr><td style="width:200px;">待爬取新网页数量</td><td id="newtask">loading</td></tr>
+						<tr><td>需要更新网页数量</td><td id="updatetask">loading</td></tr>
+					</table>
+				</div>
+			</div>
+			<div class="row bs-callout bs-callout-danger" style="padding-bottom: 0; ">
+				<div class="col-md-12">
+					<h4  style="display:inline;">在线爬虫列表 </h4>
+					<span class="badge hbtn" id='spidercount'>loading</span>&nbsp;&nbsp;
+					<button type="button" class="btn btn-danger btn-xs hbtn" onclick="showtask()">实时任务进度</button><br><br>
 					<table class="table" id="spiderlist"></table>
 				</div>
 			</div>
 		</div>
-		<div class="col-md-8">
+		<div class="col-md-8 board" id="docboard" style="display: none">
+			<h2>文档更新日志</h2>
+		</div>
+		<div class="col-md-8 board" id="queueboard" style="display: none">
+			<h2>队列任务控制</h2>
+		</div>
+		<div class="col-md-8 board" id="taskboard" style="display: none">
 			<div class="row">
-				<div class="col-md-12 board" id="tasklistboard">
-					<h2 id="onprocess">任务执行进度&nbsp;&nbsp;( loading )</h2>
+				<div class="col-md-12">
+					<h2 id="onprocess">实时执行进度&nbsp;&nbsp;( loading )</h2>
 				</div>
 			</div>
 			<div class="row">
