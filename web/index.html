@@ -22,7 +22,7 @@
 			<div class="row bs-callout bs-callout-info" style="padding-bottom: 0; ">
 				<div class="col-md-12">
 					<h4  style="display:inline;">文档数量信息</h4>&nbsp;&nbsp;
-					<button type="button" class="btn btn-info btn-xs hbtn" onclick="showdoc()">文档爬取日志</button><br><br>
+					<button type="button" class="btn btn-info btn-xs hbtn" onclick="showdoc()">显示日志信息</button><br><br>
 					<table class="table">
 						<tr><td style="width:200px;">已存文档总量</td><td id="totaldoc">loading</td></tr>
 						<tr><td>今日新增总量</td><td id="todaynew">loading</td></tr>
@@ -50,31 +50,19 @@
 				</div>
 			</div>
 		</div>
-		<div class="col-md-8 board" id="docboard" style="width:800px; float:left; display:none;">
-			<div class="row">
-				<br><br>
+		<div class="col-md-8" style="width:880px; float:left;">
+			<div class="row" style="display:none;" id="docboard">
 				<div class="col-md-12">
-					<div id="doccount" style="width:750px; height:400px;" ></div>
+					<br>
+					<div id="doccount" style="width:800px; height:300px;" ></div>
 				</div>
 			</div>
-		</div>
-		<div class="col-md-8 board" id="queueboard" style="width:800px; float:left; display:none;">
-			<div class="row">
-				<div class="col-md-12">
-					<h2>队列任务控制</h2>
-				</div>
-			</div>
-			<div class="row">
+			<div class="row"  style="display:none;"  id="queueboard">
+				<h3>队列任务控制</h3>
 				<div class="col-md-12"></div>
 			</div>
-		</div>
-		<div class="col-md-8 board" id="taskboard" style="width:800px; float:left; display:none;">
-			<div class="row">
-				<div class="col-md-12">
-					<h2 id="onprocess">实时任务进度&nbsp;&nbsp;( loading )</h2>
-				</div>
-			</div>
-			<div class="row">
+			<div class="row"  style="display:none;" id="taskboard">
+				<h3 id="onprocess">实时任务进度&nbsp;&nbsp;( loading )</h3>
 				<div class="col-md-12" id="tasks" style="width:750px;"></div>
 			</div>
 		</div>

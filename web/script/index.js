@@ -6,13 +6,9 @@ $(function(){
     showdoc();
 });
 
-var showdocb=false;
-var showqueueb=false;
 var showtaskb=false;
 
 function showdoc(){
-    showdocb=true;
-    showqueueb=false;
     showtaskb=false;
     $('#docboard').css("display","");
     $('#queueboard').css("display","none");
@@ -21,8 +17,6 @@ function showdoc(){
 }
 
 function showqueue(){
-    showdocb=false;
-    showqueueb=true;
     showtaskb=false;
     $('#docboard').css("display","none");
     $('#queueboard').css("display","");
@@ -30,8 +24,6 @@ function showqueue(){
 }
 
 function showtask(){
-    showdocb=false;
-    showqueueb=false;
     showtaskb=true;
     $('#docboard').css("display","none");
     $('#queueboard').css("display","none");
@@ -66,10 +58,9 @@ function loadTotalDoc(){
         setTimeout("loadTotalDoc()",1000);
     });
 }
-
 //今日文档数量
 function loadTodayDoc(){
-    $.get('/json/countlog.php',function(data){
+    $.get('/json/countlog.php?type=success',function(data){
         $("#todaynew").html(data.new);
         $("#todayupdate").html(data.update);
         setTimeout(" loadTodayDoc()",1000);
@@ -137,111 +128,112 @@ function loadTaskList(){
 function getTimeStr(offset) {
     now=new Date();
     now.setTime(Date.parse(new Date())+offset*1000);
-    year=now.getFullYear(); 
-    month=now.getMonth()+1; 
-    date=now.getDate(); 
-    hour=now.getHours(); 
-    minute=now.getMinutes(); 
-    second=now.getSeconds(); 
+    year=now.getFullYear();
+    month=now.getMonth()+1;
+    date=now.getDate();
+    hour=now.getHours();
+    minute=now.getMinutes();
+    second=now.getSeconds();
     return year+"-"+(date>9?month:'0'+month)+"-"+(date>9?date:'0'+date)+" "+(hour>9?hour:'0'+hour)+":"+(minute>9?minute:'0'+minute)+":"+(second>9?second:'0'+second);
 }
 
 //显示文档更新数量
 var doccount = echarts.init(document.getElementById('doccount'));
 function loadDocCount(){
-    if(showdocb){
-        timeto=getTimeStr(0);
-        timefrom=getTimeStr(-7200);
-        $.get("/json/countlog.php?intv=1m&from="+timefrom+"&to="+timeto,function(data){
-            time=[];
-            totalcount=[];
-            newcount=[];
-            updatecount=[];
-            if(data.interval.length>0){
-                for(var i=0;i<data.interval.length-1;i++){
-                    timestr=data.interval[i].time;
-                    time.push(timestr.substr(5,11));
-                    totalcount.push(data.interval[i].count);
-                    newcount.push(data.interval[i].new);
-                    updatecount.push(data.interval[i].update);
-                }
+    timeto=getTimeStr(0);
+    timefrom=getTimeStr(-3600*24);
+    $.get("/json/countlog.php?type=success&intv=1m&from="+timefrom+"&to="+timeto,function(data){
+        time=[];
+        newcount=[];
+        updatecount=[];
+        if(data.interval.length>0){
+            for(var i=0;i<data.interval.length-1;i++){
+                timestr=data.interval[i].time;
+                time.push(timestr.substr(5,11));
+                newcount.push(data.interval[i].new);
+                updatecount.push(data.interval[i].update);
             }
-            // 指定图表的配置项和数据
-            var option = {
-                title: {
-                    text:'      每分钟爬取文档数量 ('+timefrom.substr(0,16)+' - '+timeto.substr(0,16)+')'
-                },
-                tooltip: {
-                    trigger: 'axis',
-                    axisPointer: {
-                        animation: false
+        }
+        // 指定图表的配置项和数据
+        var option = {
+            title: {
+                text:' 24小时内获取文档数量 ( 新增 '+data.new+'  更新 '+data.update+' )',
+                subtext:'基于 '+timefrom.substr(0,16)+' 至 '+timeto.substr(0,16)+' Elasticsearch日志分析',
+                x: 'center'
+            },
+            legend: {
+                data:['新增','更新'],
+                x: 'left'
+            },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    animation: true
+                }
+            },
+            xAxis: {
+                data:time
+            },
+            yAxis: {
+                type: 'value',
+                name: '处理速度(个/分钟)',
+                splitLine: {
+                    show:false
+                }
+            },
+            series: [{
+                name: '新增',
+                hoverAnimation:true,
+                type: 'line',
+                itemStyle : {
+                    normal: {
+                        opacity:0.8,
+                        color:'#1b809e'
                     }
                 },
-                xAxis: {
-                    data:time
-                },
-                yAxis: {
-                    type: 'value',
-                    boundaryGap: [0,'100%'],
-                    splitLine: {
-                        show:false
+                lineStyle: {
+                    normal: {
+                        opacity:0.8
                     }
                 },
-                series: [{
-                    name: '总量',
-                    type: 'line',
-                    hoverAnimation:true,
-                    lineStyle: {
-                        normal: {
-                            color:'rgb(255,30,30)',
-                            width: 1
-                        }
-                    },
-                    itemStyle : { 
-                        normal: {
-                            color:'rgb(255,30,30)',
-                            opacity:0
-                        }
-                    },
-                    areaStyle: {
-                        normal:{
-                            color:'rgb(255,30,30)',
-                            opacity:0.2
-                        }
-                    },
-                    data:totalcount
-                },{
-                    name: '新增',
-                    type: 'line',
-                    lineStyle: {
-                        normal: {
-                            opacity:0
-                        }
-                    },
-                    itemStyle : { 
-                        normal: {
-                            opacity:0
-                        }
-                    },
-                    data:newcount
-                },{
-                    name: '更新',
-                    type: 'line',
-                    lineStyle: {
-                        normal: {
-                            opacity:0
-                        }
-                    },
-                    itemStyle : { 
-                        normal: {
-                            opacity:0
-                        }
-                    },
-                    data:updatecount
-                }]
-            };
-            doccount.setOption(option);
-            setTimeout("loadDocCount()",60000);
-        });
-    }
+                areaStyle: {
+                    normal: {
+                        opacity:0.3
+                    }
+                },
+                data:newcount
+            },{
+                name: '更新',
+                hoverAnimation:true,
+                type: 'line',
+                itemStyle : {
+                    normal: {
+                        opacity:0.8,
+                        color:'#eb9316'
+                    }
+                },
+                lineStyle: {
+                    normal: {
+                        opacity:0.8
+                    }
+                },
+                areaStyle: {
+                    normal: {
+                        opacity:0.3
+                    }
+                },
+                data:updatecount
+            }],
+            dataZoom: [{
+                type: 'inside',
+                start: 90,
+                end: 100
+            }, {
+                start: 90,
+                end: 100
+            }]
+        };
+        doccount.setOption(option);
+        setTimeout("loadDocCount()",60000);
+    });
 }

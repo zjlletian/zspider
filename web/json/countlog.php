@@ -5,7 +5,7 @@ header('Content-type:text/json;charset:utf-8');
 $from=isset($_GET['from'])? $_GET['from'] : date("Y-m-d "."00:00:00");
 $to=isset($_GET['to'])?$_GET['to'] : date("Y-m-d H:i:s",time());
 $interval=isset($_GET['intv'])?$_GET['intv'] : '30m';
-$type=isset($_GET['type'])?$_GET['type'] : 'success'; //type="success" or "error"
+$type=isset($_GET['type'])?$_GET['type'] : ''; //type="success" or "error"
 
 Dashboard::useES();
 $logcount=Dashboard::getLogCount($from, $to, $interval, $type);
@@ -30,11 +30,11 @@ foreach ($logcount['aggregations']["countbytime"]["buckets"] as $timeinterval) {
 
 	foreach($timeinterval["countbytype"]["buckets"] as $typecount){
 		if($typecount['key']=="New") {
-			$result['new']+$typecount['doc_count'];
+			$result['new']+=$typecount['doc_count'];
 			$interval['new']=$typecount['doc_count'];
 		}
 		else if($typecount['key']=="Update") {
-			$result['update']+$typecount['doc_count'];
+			$result['update']+=$typecount['doc_count'];
 			$interval['update']=$typecount['doc_count'];
 		}
 	}

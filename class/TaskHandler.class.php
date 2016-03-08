@@ -39,12 +39,11 @@ class TaskHandler {
 				set_time_limit(0);
 			}
 			else{
-				if($GLOBALS['DEBUG']){
-					echo "Get null task ,hash:".$hash."\n\n";
+				$hash=$hash+mt_rand(10,20);
+				if($hash>=300){
+					$hash=0;
+					sleep(2);
 				}
-				$hash=($hash+mt_rand(10,20))%300;
-				$hash=$hash>=300 ? 0:$hash;
-				sleep(2);
 			}
 		}
 	}
