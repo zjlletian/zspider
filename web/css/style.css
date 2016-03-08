@@ -1,5 +1,8 @@
 body {
-    font-family: "Microsoft YaHei";
+    font-family: 'Open Sans','Helvetica Neue',Arial,'Hiragino Sans GB','Microsoft YaHei','WenQuanYi Micro Hei',sans-serif;
+    font-size: 13px;
+    /*background-color:rgb(51, 51, 51);
+    color:rgb(240,240,240);*/
 }
 
 .hbtn{

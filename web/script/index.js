@@ -3,7 +3,7 @@ $(function(){
     loadQueueInfo();
     loadTotalDoc();
     loadTodayDoc();
-    showtask();
+    showdoc();
 });
 
 var showdocb=false;
@@ -17,6 +17,7 @@ function showdoc(){
     $('#docboard').css("display","");
     $('#queueboard').css("display","none");
     $('#taskboard').css("display","none");
+    loadDocCount();
 }
 
 function showqueue(){
@@ -38,7 +39,7 @@ function showtask(){
     loadTaskList();
 }
 
-//加载队列信息
+//加载队列与在线爬虫列表
 var spiderinfoh='<tr><th>机器标识</th> <th>IP</th> <th>执行中任务数量</th> </tr>';
 var spiderinfo='<tr><td>{$name}</td> <td>{$ip}</td> <td>{$tasks}</td> </tr>';
 function loadQueueInfo(){
@@ -65,6 +66,7 @@ function loadTotalDoc(){
         setTimeout("loadTotalDoc()",1000);
     });
 }
+
 //今日文档数量
 function loadTodayDoc(){
     $.get('/json/countlog.php',function(data){
@@ -124,9 +126,122 @@ function loadTaskList(){
                 tlist+=taskbar;
             }
             $('#tasks').html(tlist);
-            $('#onprocess').html('实时执行进度&nbsp;&nbsp;( 执行:'+(tasks.length-error)+'&nbsp;&nbsp;等待:'+wait+'&nbsp;&nbsp;超时:'+error+' )');
+            $('#onprocess').html('实时任务进度&nbsp;&nbsp;( 执行:'+(tasks.length-error)+'&nbsp;&nbsp;等待:'+wait+'&nbsp;&nbsp;超时:'+error+' )');
 
             setTimeout("loadTaskList()",1000);
+        });
+    }
+}
+
+//时间戳格式化
+function getTimeStr(offset) {
+    now=new Date();
+    now.setTime(Date.parse(new Date())+offset*1000);
+    year=now.getFullYear(); 
+    month=now.getMonth()+1; 
+    date=now.getDate(); 
+    hour=now.getHours(); 
+    minute=now.getMinutes(); 
+    second=now.getSeconds(); 
+    return year+"-"+(date>9?month:'0'+month)+"-"+(date>9?date:'0'+date)+" "+(hour>9?hour:'0'+hour)+":"+(minute>9?minute:'0'+minute)+":"+(second>9?second:'0'+second);
+}
+
+//显示文档更新数量
+var doccount = echarts.init(document.getElementById('doccount'));
+function loadDocCount(){
+    if(showdocb){
+        timeto=getTimeStr(0);
+        timefrom=getTimeStr(-7200);
+        $.get("/json/countlog.php?intv=1m&from="+timefrom+"&to="+timeto,function(data){
+            time=[];
+            totalcount=[];
+            newcount=[];
+            updatecount=[];
+            if(data.interval.length>0){
+                for(var i=0;i<data.interval.length-1;i++){
+                    timestr=data.interval[i].time;
+                    time.push(timestr.substr(11,5));
+                    totalcount.push(data.interval[i].count);
+                    newcount.push(data.interval[i].new);
+                    updatecount.push(data.interval[i].update);
+                }
+            }
+            // 指定图表的配置项和数据
+            var option = {
+                title: {
+                    text:'      每分钟爬取文档数量 ('+timefrom.substr(0,16)+' - '+timeto.substr(0,16)+')'
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        animation: false
+                    }
+                },
+                xAxis: {
+                    data:time
+                },
+                yAxis: {
+                    type: 'value',
+                    boundaryGap: [0,'100%'],
+                    splitLine: {
+                        show:false
+                    }
+                },
+                series: [{
+                    name: '总量',
+                    type: 'line',
+                    hoverAnimation:true,
+                    lineStyle: {
+                        normal: {
+                            color:'rgb(255,30,30)',
+                            width: 1
+                        }
+                    },
+                    itemStyle : { 
+                        normal: {
+                            color:'rgb(255,30,30)',
+                            opacity:0
+                        }
+                    },
+                    areaStyle: {
+                        normal:{
+                            color:'rgb(255,30,30)',
+                            opacity:0.2
+                        }
+                    },
+                    data:totalcount
+                },{
+                    name: '新增',
+                    type: 'line',
+                    lineStyle: {
+                        normal: {
+                            opacity:0
+                        }
+                    },
+                    itemStyle : { 
+                        normal: {
+                            opacity:0
+                        }
+                    },
+                    data:newcount
+                },{
+                    name: '更新',
+                    type: 'line',
+                    lineStyle: {
+                        normal: {
+                            opacity:0
+                        }
+                    },
+                    itemStyle : { 
+                        normal: {
+                            opacity:0
+                        }
+                    },
+                    data:updatecount
+                }]
+            };
+            doccount.setOption(option);
+            setTimeout("loadDocCount()",60000);
         });
     }
 }

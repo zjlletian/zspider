@@ -93,12 +93,12 @@ class Dashboard{
                             "terms" => [
                                 "field" => "spider"
                             ]
+                        ],
+                        "countbytype"=>[
+                            "terms" => [
+                                "field" => "type"
+                            ]
                         ]
-                    ]
-                ],
-                "countbytype"=>[
-                    "terms" => [
-                        "field" => "type"
                     ]
                 ]
             ]

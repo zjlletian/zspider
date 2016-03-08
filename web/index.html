@@ -11,9 +11,9 @@
 </head>
 
 <body>
-<div class="container-fluid" style="width:95%">
+<div class="container-fluid" style="width:1300px">
 	<div class="row">
-		<div class="col-md-4">
+		<div class="col-md-4" style="width:400px; float:left;">
 			<div class="row">
 				<div class="col-md-12">
 					<h2>&nbsp;ZSpider DashBoard</h2>
@@ -22,7 +22,7 @@
 			<div class="row bs-callout bs-callout-info" style="padding-bottom: 0; ">
 				<div class="col-md-12">
 					<h4  style="display:inline;">文档数量信息</h4>&nbsp;&nbsp;
-					<button type="button" class="btn btn-info btn-xs hbtn" onclick="showdoc()">文档更新日志</button><br><br>
+					<button type="button" class="btn btn-info btn-xs hbtn" onclick="showdoc()">文档爬取日志</button><br><br>
 					<table class="table">
 						<tr><td style="width:200px;">已存文档总量</td><td id="totaldoc">loading</td></tr>
 						<tr><td>今日新增总量</td><td id="todaynew">loading</td></tr>
@@ -50,27 +50,40 @@
 				</div>
 			</div>
 		</div>
-		<div class="col-md-8 board" id="docboard" style="display: none">
-			<h2>文档更新日志</h2>
+		<div class="col-md-8 board" id="docboard" style="width:800px; float:left; display:none;">
+			<div class="row">
+				<br><br>
+				<div class="col-md-12">
+					<div id="doccount" style="width:750px; height:400px;" ></div>
+				</div>
+			</div>
 		</div>
-		<div class="col-md-8 board" id="queueboard" style="display: none">
-			<h2>队列任务控制</h2>
-		</div>
-		<div class="col-md-8 board" id="taskboard" style="display: none">
+		<div class="col-md-8 board" id="queueboard" style="width:800px; float:left; display:none;">
 			<div class="row">
 				<div class="col-md-12">
-					<h2 id="onprocess">实时执行进度&nbsp;&nbsp;( loading )</h2>
+					<h2>队列任务控制</h2>
 				</div>
 			</div>
 			<div class="row">
-				<div class="col-md-12" id="tasks"></div>
+				<div class="col-md-12"></div>
+			</div>
+		</div>
+		<div class="col-md-8 board" id="taskboard" style="width:800px; float:left; display:none;">
+			<div class="row">
+				<div class="col-md-12">
+					<h2 id="onprocess">实时任务进度&nbsp;&nbsp;( loading )</h2>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-12" id="tasks" style="width:750px;"></div>
 			</div>
 		</div>
 	</div>
 </div>
 </body>
-
 <script src="//cdn.bootcss.com/jquery/1.11.3/jquery.min.js"></script>
 <script src="//cdn.bootcss.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+<script src="/script/echarts.min.js"></script>
+<script src="/script/dark.js"></script>
 <script src="/script/index.js"></script>
 </html>
