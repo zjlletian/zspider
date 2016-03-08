@@ -160,7 +160,7 @@ function loadDocCount(){
             if(data.interval.length>0){
                 for(var i=0;i<data.interval.length-1;i++){
                     timestr=data.interval[i].time;
-                    time.push(timestr.substr(11,5));
+                    time.push(timestr.substr(5,11));
                     totalcount.push(data.interval[i].count);
                     newcount.push(data.interval[i].new);
                     updatecount.push(data.interval[i].update);
