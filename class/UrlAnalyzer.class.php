@@ -238,11 +238,13 @@ class UrlAnalyzer{
 				$response['error']=$e->getMessage();
 			}
 		}
-		curl_close($ch);
-		unset($ch);
-		phpQuery::$documents = array();
-		$response['level']=$level;
-	    return $response;
+		finally{
+			curl_close($ch);
+			unset($ch);
+			phpQuery::$documents = array();
+			$response['level']=$level;
+			return $response;
+		}
 	}
 
 	//从meta中获取contentType数组：[ doctype , charset ]（从phpquery中提取）

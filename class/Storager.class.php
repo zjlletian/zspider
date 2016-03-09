@@ -128,7 +128,7 @@ class Storager{
 		$urlinfo['md5']=md5($urlinfo['text']);
 		$upsert = $urlinfo;
 		$upsert['view'] = 0;
-		return EsConnector::updateDocByDoc('zspider','html',md5($urlinfo['url']),$urlinfo,$upsert);
+		return EsConnector::updateDocByDoc_curl('zspider','html',md5($urlinfo['url']),$urlinfo,$upsert,30);
 	}
 
 	//记录日志
@@ -139,6 +139,6 @@ class Storager{
 			self::$logindex="zspiderlog-".date("Y.m.d",$servertime);
 			self::creatLogIndex();
 		}
-		return EsConnector::insertDoc(self::$logindex,$logtype,$servertime.uniqid(),$log);
+		return EsConnector::insertDoc_curl(self::$logindex,$logtype,$servertime.uniqid(),$log,10);
 	}
 }

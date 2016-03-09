@@ -100,16 +100,9 @@ class ESConnector {
 	}
 
 	//插document curl方式
-	static function insertDoc_curl($index,$type,$id,$docbody){
-		$data = $docbody;
-		$ch = curl_init ();
-		curl_setopt ( $ch, CURLOPT_URL,"{$GLOBALS['ELASTICSEARCH'][0]}/{$index}/{$type}/{$id}");
-		curl_setopt ( $ch, CURLOPT_POST, 1 );
-		curl_setopt ( $ch, CURLOPT_HEADER, 0 );
-		curl_setopt ( $ch, CURLOPT_RETURNTRANSFER, 1 );
-		curl_setopt ( $ch, CURLOPT_POSTFIELDS, json_encode($data) );
-		$json=curl_exec ( $ch );
-		return json_decode($json,true);
+	static function insertDoc_curl($index,$type,$id,$docbody,$timeout=null){
+		$data = json_encode($docbody);
+		return  Util::urlPost("{$GLOBALS['ELASTICSEARCH'][0]}/{$index}/{$type}/{$id}",$data,$timeout,true);
 	}
 
 	//更新document
@@ -131,6 +124,16 @@ class ESConnector {
 		catch(Exception $e){
 			return false;
 		}
+	}
+
+	//更新document curl方式
+	static function updateDocByDoc_curl($index,$type,$id,$docbody,$upsert=null,$timeout=null){
+		$params['doc'] =$docbody;
+		if($upsert!=null){
+			$params['upsert'] = $upsert;
+		}
+		$data = json_encode($params);
+		return Util::urlPost("{$GLOBALS['ELASTICSEARCH'][0]}/{$index}/{$type}/{$id}",$data,$timeout,true);
 	}
 
 	//使用script更新document
@@ -170,16 +173,9 @@ class ESConnector {
 		}
 	}
 
-	//查询（CURL方式）
-	static function search_curl($index,$type,$body){
-		$data = $body;
-		$ch = curl_init ();
-		curl_setopt ( $ch, CURLOPT_URL,"{$GLOBALS['ELASTICSEARCH'][0]}/{$index}/{$type}/_search");
-		curl_setopt ( $ch, CURLOPT_POST, 1 );
-		curl_setopt ( $ch, CURLOPT_HEADER, 0 );
-		curl_setopt ( $ch, CURLOPT_RETURNTRANSFER, 1 );
-		curl_setopt ( $ch, CURLOPT_POSTFIELDS, json_encode($data) );
-		$json=curl_exec ( $ch );
-		return json_decode($json,true);
+	//查询 curl方式
+	static function search_curl($index,$type,$body,$timeout=null){
+		$data = json_encode($body);
+		return Util::urlPost("{$GLOBALS['ELASTICSEARCH'][0]}/{$index}/{$type}/_search",$data,$timeout,true);
 	}
 }

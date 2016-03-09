@@ -39,6 +39,9 @@ class TaskHandler {
 				set_time_limit(0);
 			}
 			else{
+				if($GLOBALS['DEBUG']){
+					Util::echoYellow("Get null task in offset ".$hash."\n");
+				}
 				$hash=$hash+mt_rand(10,20);
 				if($hash>=300){
 					$hash=0;

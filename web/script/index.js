@@ -126,7 +126,7 @@ function getTimeStr(offset) {
     hour=now.getHours();
     minute=now.getMinutes();
     second=now.getSeconds();
-    return year+"-"+(date>9?month:'0'+month)+"-"+(date>9?date:'0'+date)+" "+(hour>9?hour:'0'+hour)+":"+(minute>9?minute:'0'+minute)+":"+(second>9?second:'0'+second);
+    return year+"-"+(month>9?month:'0'+month)+"-"+(date>9?date:'0'+date)+" "+(hour>9?hour:'0'+hour)+":"+(minute>9?minute:'0'+minute)+":"+(second>9?second:'0'+second);
 }
 
 //显示文档更新数量
