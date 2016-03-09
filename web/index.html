@@ -11,7 +11,7 @@
 </head>
 
 <body>
-<div class="container-fluid" style="width:1300px">
+<div class="container-fluid" style="width:1250px">
 	<div class="row">
 		<div class="col-md-4" style="width:400px; float:left;">
 			<div class="row">
@@ -34,7 +34,7 @@
 			<div class="row bs-callout bs-callout-warning" style="padding-bottom: 0; ">
 				<div class="col-md-12">
 					<h4  style="display:inline;">队列任务信息</h4>&nbsp;&nbsp;
-					<button type="button" class="btn btn-warning btn-xs hbtn" onclick="showqueue()">队列任务控制</button><br><br>
+					<button type="button" class="btn btn-warning btn-xs hbtn" onclick="showtask()">实时任务进度</button><br><br>
 					<table class="table" id="queueinfo">
 						<tr><td style="width:200px;">待爬取新网页数量</td><td id="newtask">loading</td></tr>
 						<tr><td>需要更新网页数量</td><td id="updatetask">loading</td></tr>
@@ -43,27 +43,28 @@
 			</div>
 			<div class="row bs-callout bs-callout-danger" style="padding-bottom: 0; ">
 				<div class="col-md-12">
-					<h4  style="display:inline;">在线爬虫列表 </h4>
-					<span class="badge hbtn" id='spidercount'>loading</span>&nbsp;&nbsp;
-					<button type="button" class="btn btn-danger btn-xs hbtn" onclick="showtask()">实时任务进度</button><br><br>
+					<h4  style="display:inline;">在线爬虫列表 </h4>&nbsp;&nbsp;
+					<span class="badge hbtn" id='spidercount'>loading</span><br><br>
 					<table class="table" id="spiderlist"></table>
 				</div>
 			</div>
 		</div>
-		<div class="col-md-8" style="width:880px; float:left;">
+		<div class="col-md-8" style="width:850px; float:left;">
 			<div class="row" style="display:none;" id="docboard">
 				<div class="col-md-12">
-					<br>
-					<div id="doccount" style="width:800px; height:300px;" ></div>
+					<div class="row">
+						<br>
+						<div id="doccount" style="width:850px; height:300px; float:left;" ></div>	
+					</div>
+					<div class="row">
+						<div id="avgtime" style="width:400px; height:350px; float:left;"></div>
+						<div id="typecount" style="width:400px; height:350px; float:left;"></div>
+					</div>
 				</div>
-			</div>
-			<div class="row"  style="display:none;"  id="queueboard">
-				<h3>队列任务控制</h3>
-				<div class="col-md-12"></div>
 			</div>
 			<div class="row"  style="display:none;" id="taskboard">
 				<h3 id="onprocess">实时任务进度&nbsp;&nbsp;( loading )</h3>
-				<div class="col-md-12" id="tasks" style="width:750px;"></div>
+				<div class="col-md-12" id="tasks" style="width:800px;"></div>
 			</div>
 		</div>
 	</div>

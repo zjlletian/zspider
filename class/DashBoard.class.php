@@ -106,6 +106,58 @@ class Dashboard{
         return EsConnector::search('zspiderlog-*',$type,$query);
     }
 
+    //获取日志统计
+    static function getAvgTime($from, $to){
+        $query=[
+            "query"=> [
+                "bool"=> [ //filtered
+                    "must"=> [ //filter
+                        "range"=> [
+                            "time"=> [
+                                "gte"=>$from,
+                                "lte"=>$to
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            "size" => 0,
+            "aggs" => [
+                "avgtotal"=>[
+                    "avg"=>[
+                        "field"=> "timeinfo.total"
+                    ]
+                ],
+                "avggettask"=>[
+                    "avg"=>[
+                        "field"=> "timeinfo.gettask"
+                    ]
+                ],
+                "avgdownload"=>[
+                    "avg"=>[
+                        "field"=> "timeinfo.download"
+                    ]
+                ],
+                "avgextarct"=>[
+                    "avg"=>[
+                        "field"=> "timeinfo.extarct"
+                    ]
+                ],
+                "avgfindlinks"=>[
+                    "avg"=>[
+                        "field"=> "timeinfo.findlinks"
+                    ]
+                ],
+                "avgsaveinfo"=>[
+                    "avg"=>[
+                        "field"=> "timeinfo.saveinfo"
+                    ]
+                ]
+            ]
+        ];
+        return EsConnector::search('zspiderlog-*','success',$query);
+    }
+
     //获取文档数量
     static function getDocCount($from, $to, $interval, $doctype){
         $query=[

@@ -4,6 +4,8 @@ $(function(){
     loadTotalDoc();
     loadTodayDoc();
     showdoc();
+	loadDocCount();
+	loadAvgTime();
 });
 
 var showtaskb=false;
@@ -11,28 +13,18 @@ var showtaskb=false;
 function showdoc(){
     showtaskb=false;
     $('#docboard').css("display","");
-    $('#queueboard').css("display","none");
-    $('#taskboard').css("display","none");
-    loadDocCount();
-}
-
-function showqueue(){
-    showtaskb=false;
-    $('#docboard').css("display","none");
-    $('#queueboard').css("display","");
     $('#taskboard').css("display","none");
 }
 
 function showtask(){
     showtaskb=true;
     $('#docboard').css("display","none");
-    $('#queueboard').css("display","none");
     $('#taskboard').css("display","");
     loadTaskList();
 }
 
 //加载队列与在线爬虫列表
-var spiderinfoh='<tr><th>机器标识</th> <th>IP</th> <th>执行中任务数量</th> </tr>';
+var spiderinfoh='<tr><th>机器标识</th> <th>IP</th> <th>实时任务数量</th> </tr>';
 var spiderinfo='<tr><td>{$name}</td> <td>{$ip}</td> <td>{$tasks}</td> </tr>';
 function loadQueueInfo(){
     $.get('/json/queueinfo.php',function(data){
@@ -140,36 +132,41 @@ function getTimeStr(offset) {
 //显示文档更新数量
 var doccount = echarts.init(document.getElementById('doccount'));
 function loadDocCount(){
-    timeto=getTimeStr(0);
+    timeto=getTimeStr(-60);
     timefrom=getTimeStr(-3600*24);
     $.get("/json/countlog.php?type=success&intv=1m&from="+timefrom+"&to="+timeto,function(data){
         time=[];
         newcount=[];
         updatecount=[];
-        if(data.interval.length>0){
-            for(var i=0;i<data.interval.length-1;i++){
-                timestr=data.interval[i].time;
-                time.push(timestr.substr(5,11));
-                newcount.push(data.interval[i].new);
-                updatecount.push(data.interval[i].update);
-            }
+
+        for(var i=-3600*24;i<-60;i+=60){
+        	timestr=getTimeStr(i).substr(0,16)+':00';
+        	time.push(timestr.substr(5,11));
+        	if(data.interval.length>0 && data.interval[0].time<=timestr){
+        		intv=data.interval.shift();
+        		newcount.push(intv.new);
+                updatecount.push(intv.update);
+        	}
+        	else{
+        		newcount.push(0);
+                updatecount.push(0);
+        	}
         }
+
         // 指定图表的配置项和数据
         var option = {
             title: {
-                text:' 24小时内获取文档数量 ( 新增 '+data.new+'  更新 '+data.update+' )',
+                text:'24小时内获取文档数量 ( 新增 '+data.new+'  更新 '+data.update+' )',
                 subtext:'基于 '+timefrom.substr(0,16)+' 至 '+timeto.substr(0,16)+' Elasticsearch日志分析',
-                x: 'center'
+                x: 'center',
+                top:-8
             },
             legend: {
                 data:['新增','更新'],
                 x: 'left'
             },
             tooltip: {
-                trigger: 'axis',
-                axisPointer: {
-                    animation: true
-                }
+                trigger: 'axis'
             },
             xAxis: {
                 data:time
@@ -198,7 +195,7 @@ function loadDocCount(){
                 },
                 areaStyle: {
                     normal: {
-                        opacity:0.3
+                        opacity:0.2
                     }
                 },
                 data:newcount
@@ -219,7 +216,7 @@ function loadDocCount(){
                 },
                 areaStyle: {
                     normal: {
-                        opacity:0.3
+                        opacity:0.2
                     }
                 },
                 data:updatecount
@@ -236,4 +233,48 @@ function loadDocCount(){
         doccount.setOption(option);
         setTimeout("loadDocCount()",60000);
     });
+}
+
+var avgTime = echarts.init(document.getElementById('avgtime'));
+function loadAvgTime(){
+	$.get("/json/avgtime",function(data){
+		var option = {
+	        title: {
+	            text:'单文档处理周期 '+data.total+'s (实时)',
+	            subtext:'基于 '+getTimeStr(-120).substr(11,5)+' 至 '+getTimeStr(-60).substr(11,5)+' Elasticsearch日志平均速度分析',
+	            x:'center',
+	            top:15
+	        },
+	        tooltip : {
+		        trigger: 'item',
+		        formatter: "{b} : {c}s ({d}%)"
+		    },
+		    series : [{
+	            name:'处理周期',
+	            type:'pie',
+	            radius : [25,95],
+	            selectedMode: 'single',
+	            center : ['50%',200],
+	            roseType : 'area',
+	            data:[{
+	            	value:data.gettask,
+	            	name:'获取任务'
+	            },{
+	            	value:data.download,
+	            	name:'下载文档'
+	            },{
+	            	value:data.extarct,
+	            	name:'正文提取'
+	            },{
+	            	value:data.findlinks,
+	            	name:'链接分析'
+	            },{
+	            	value:data.saveinfo,
+	            	name:'保存信息'
+	            }].sort(function(a,b){return a.value-b.value})
+	        }]
+	    };
+		avgTime.setOption(option);
+        setTimeout("loadAvgTime()",60000);
+	});
 }

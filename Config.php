@@ -62,7 +62,8 @@ $GLOBALS['NOTTRACE_HAS'] = array(
 	'/search',
 	'www.baidu.com',
 	'www.sogou.com',
-	'www.so.com'
+	'www.so.com',
+	'auto.163'
 );
 
 //--------------------------------- 任务队列规则配置 --------------------------------------
@@ -95,7 +96,7 @@ $GLOBALS['DEFAULT_SITE'] = array(
 	array('url'=>'http://www.sina.com.cn/','level'=>4),
 	array('url'=>'http://www.qq.com/','level'=>4),
 	array('url'=>'http://www.ifeng.com/','level'=>3),
-	array('url'=>'http://www.163.com/','level'=>3),
+	array('url'=>'http://www.163.com/','level'=>2),
 	array('url'=>'http://www.csdn.net/','level'=>2),
 	array('url'=>'http://www.guokr.com/','level'=>2),
 	array('url'=>'http://www.zol.com.cn/','level'=>2),
