@@ -4,9 +4,8 @@ require_once(dirname(dirname(__FILE__)).'/Config.php');
 class Util{
 
 	//检查网络状态，如果网络不通畅则
-	static function isNetError(){
-		$check = @fopen('http://www.baidu.com',"r"); 
-		return !$check;
+	static function isNetError(){  
+		return !@fopen('http://www.baidu.com',"r");
 	}
 
 	//重命名以前的日志
@@ -89,6 +88,36 @@ class Util{
 			curl_close($ch);
 			unset($ch);
 			return $result;
+		}
+	}
+
+	//写入pid
+	static function writePid($pid){
+		$pidpath=APPROOT."/pids";
+		$pidfile=APPROOT."/pids/{$pid}.pid";
+		if(!file_exists($pidpath)){
+    		mkdir($pidpath);
+    	}
+    	if(!file_exists($pidfile)){
+    		touch($pidfile);
+    	}
+		file_put_contents($pidfile,time());
+	}
+
+	//kill超时pid
+	static function killPid($maxtime){
+		$pidpath=APPROOT."/pids";
+		if(file_exists($pidpath)){
+			foreach(new FilesystemIterator($pidpath, FilesystemIterator::SKIP_DOTS ) as $pidfile) {
+				$pid=trim($pidfile->getFilename(),'.pid');
+				$time=intval(file_get_contents($pidfile));
+				if($time<time()-$maxtime){
+					Util::echoRed("[".date("Y-m-d H:i:s")."] kill Handler,task has used ".(time()-$time)."s, max time is ".$maxtime."s, PID:".$pid."\n");
+					Util::putErrorLog("kill Handler,task has used ".(time()-$time)."s, max time is ".$maxtime."s, PID:".$pid."\r\n\r\n");
+					exec("kill -9 ".$pid);
+					unlink($pidfile);
+				}
+			}
 		}
 	}
 }

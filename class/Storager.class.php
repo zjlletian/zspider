@@ -101,6 +101,9 @@ class Storager{
 								],
 								'saveinfo'=>[
 									'type' => 'float'
+								],
+								'submit'=>[
+									'type' => 'float'
 								]
 							]
 						]

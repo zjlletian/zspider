@@ -61,14 +61,15 @@ $GLOBALS['NOTTRACE_HAS'] = array(
 	'passport',
 	'/search',
 	'www.baidu.com',
+	'm.baidu.com',
 	'www.sogou.com',
 	'www.so.com',
-	'auto.163'
+	'auto.163.com'
 );
 
 //--------------------------------- 任务队列规则配置 --------------------------------------
 
-$GLOBALS['TASKTIME']=60;
+$GLOBALS['TASKTIME']=90;
 
 //默认更新周期
 $GLOBALS['UPDATE_TIME'] = array(
@@ -94,9 +95,9 @@ $GLOBALS['NOTUPDATE_HAS'] = array(
 
 //默认起点站点
 $GLOBALS['DEFAULT_SITE'] = array(
-	array('url'=>'https://www.baidu.com/','level'=>4),
-	array('url'=>'http://www.sina.com.cn/','level'=>4),
-	array('url'=>'http://www.qq.com/','level'=>4),
+	array('url'=>'https://www.baidu.com/','level'=>3),
+	array('url'=>'http://www.sina.com.cn/','level'=>3),
+	array('url'=>'http://www.qq.com/','level'=>3),
 	array('url'=>'http://www.ifeng.com/','level'=>3),
 	array('url'=>'http://www.163.com/','level'=>2),
 	array('url'=>'http://www.csdn.net/','level'=>2),

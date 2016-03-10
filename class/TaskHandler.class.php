@@ -5,13 +5,14 @@ class TaskHandler {
 
 	//正在处理的任务
 	static $dealingTask;
+	static $pid;
 
 	//创建爬虫子进程
 	static function createProgress($hash) {
 		$pid = pcntl_fork();
 		if(!$pid) {
+			self::$pid=posix_getpid();
 			register_shutdown_function('fatalErrorHandler');
-			//error_reporting(0);
 			self::runTask($hash);
 		}
 		else{
@@ -29,14 +30,12 @@ class TaskHandler {
 
 		//循环获取任务
 		while(true){
+			Util::writePid(self::$pid);
 			$now=microtime(true);
 		    $task=TaskManager::getTask($hash);
 			if($task!=null){
 				self::$dealingTask=$task;
-				//设置单个最长任务时间，防止任务卡死（该函数时间不包括调用系统函数时间，调用数据库或sleep时间）
-				set_time_limit(120);
 				self::handleTask($task,$now);
-				set_time_limit(0);
 			}
 			else{
 				if($GLOBALS['DEBUG']){
@@ -45,7 +44,7 @@ class TaskHandler {
 				$hash=$hash+mt_rand(10,20);
 				if($hash>=300){
 					$hash=0;
-					sleep(2);
+					sleep(5);
 				}
 			}
 		}
@@ -99,12 +98,13 @@ class TaskHandler {
             }
 		}
 		$savetime=round(microtime(true)-$savenow,3);
-		$totaltime=round(microtime(true)-$now,3);
+		$proctime=round(microtime(true)-$now,3);
 
 		//提交任务执行结果,记录日志到ES
 		$submitnow=microtime(true);
 		if(TaskManager::submitTask($task,$urlinfo)){
 			$submittime=round(microtime(true)-$submitnow,3);
+			$totaltime=round(microtime(true)-$now,3);
 			$lognow=microtime(true);
 			$log['url']=$task['url'];
 			$log['type']=$task['type']==0? "New":"Update";
@@ -116,6 +116,7 @@ class TaskHandler {
 				$log['timeinfo']=$urlinfo['timeinfo'];
 				$log['timeinfo']['gettask']=$gettasktime;
 				$log['timeinfo']['saveinfo']=$savetime;
+				$log['timeinfo']['submit']=$submittime;
 				$log['timeinfo']['total']=$totaltime;
 				$logtype="success";
 			}
@@ -125,12 +126,14 @@ class TaskHandler {
 				$logtype="error";
 			}
 			Storager::putLog($log,$logtype);
+			$logtime=round(microtime(true)-$lognow,3);
+
 			if(!isset($urlinfo['error']) && $GLOBALS['DEBUG']){
-				echo "Text:".round(strlen($urlinfo['text'])/1024,2)."KB Links:".count($urlinfo['links'])." Url: ".$task['url']."\n";
+				echo "Size:".round(strlen($urlinfo['text'])/1024,2)."KB Links:".count($urlinfo['links'])." Url: ".$task['url']."\n";
 				echo "Gettask:".$gettasktime."s download:".$urlinfo['timeinfo']['download']."s extarct:".$urlinfo['timeinfo']['extarct']."s findhref:".$urlinfo['timeinfo']['findlinks']."s saveinfo:".$savetime."s\n";
-				$logtime=round(microtime(true)-$lognow,3);
-				$sum=$totaltime+$submittime+$logtime;
-				echo "Proc:".$totaltime."s(".round($totaltime/$sum*100,1)."%) Submit:".$submittime."s(".round($submittime/$sum*100,1)."%) Log:".$logtime."s(".round($logtime/$sum*100,1)."%)\n\n";
+				
+				$sum=$proctime+$submittime+$logtime;
+				echo "Proc:".$proctime."s(".round($proctime/$sum*100,1)."%) Submit:".$submittime."s(".round($submittime/$sum*100,1)."%) Log:".$logtime."s(".round($logtime/$sum*100,1)."%)\n\n";
 			}
 		}
 		unset($log);

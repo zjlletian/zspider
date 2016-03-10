@@ -152,6 +152,11 @@ class Dashboard{
                     "avg"=>[
                         "field"=> "timeinfo.saveinfo"
                     ]
+                ],
+                "avgsubmit"=>[
+                    "avg"=>[
+                        "field"=> "timeinfo.submit"
+                    ]
                 ]
             ]
         ];
@@ -159,30 +164,8 @@ class Dashboard{
     }
 
     //获取文档数量
-    static function getDocCount($from, $to, $interval, $doctype){
-        $query=[
-            "query"=> [
-                "bool"=> [
-                    "must"=> [
-                        "range"=> [
-                            "time"=> [
-                                "gte"=>$from,
-                                "lte"=>$to
-                            ]
-                        ]
-                    ]
-                ]
-            ],
-            "size" => 0,
-            "aggs" => [
-                "countbytime" => [
-                    "date_histogram" => [
-                        "field" => "time",
-                        "interval" => $interval
-                    ]
-                ]
-            ]
-        ];
+    static function getDocCount($doctype){
+        $query=["size"=>0];
         return EsConnector::search('zspider',$doctype,$query);
     }
 }

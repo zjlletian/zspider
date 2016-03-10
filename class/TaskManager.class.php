@@ -24,12 +24,12 @@ class TaskManager {
 	//获取一个到达处理时间的爬虫任务
 	static function getTask($hash){
 
-		$uniqid=md5($GLOBALS['SPIDERNAME'].mt_rand(0,1000).uniqid());
+		$uniqid=md5($GLOBALS['SPIDERNAME'].TaskHandler::$pid.uniqid());
 
-		//获取一个处理超时需要重新处理的任务，每增加一个level或者失败一次增加十秒可用时间
+		//获取一个处理超时需要重新处理的任务
 		$task =mysqli_fetch_assoc(mysqli_query(self::$mycon,"select * from onprocess where status=0 and times<4 limit 1"));
 		if($task!=null){
-            mysqli_query(self::$mycon,"update onprocess set uniqid='{$uniqid}',status=1,times=times+1,proctime=(SELECT unix_timestamp(now())),acktime=(SELECT unix_timestamp(now())+{$GLOBALS['TASKTIME']}+times*10+level*10),spider='{$GLOBALS['SPIDERNAME']}' where id={$task['id']} and status=0 limit 1");
+            mysqli_query(self::$mycon,"update onprocess set uniqid='{$uniqid}',status=1,times=times+1,proctime=(SELECT unix_timestamp(now())),acktime=(SELECT unix_timestamp(now())+{$GLOBALS['TASKTIME']}),spider='{$GLOBALS['SPIDERNAME']}' where id={$task['id']} and status=0 limit 1");
 			$task =mysqli_fetch_assoc(mysqli_query(self::$mycon,"select * from onprocess where uniqid='{$uniqid}'"));
 			if($task!=null){
 				return $task;
@@ -44,7 +44,7 @@ class TaskManager {
 			//从队列中删除任务
             mysqli_query(self::$mycon,"delete from taskqueue where id={$task['id']} limit 1");
 			//标记为正在处理
-            mysqli_query(self::$mycon,"insert into onprocess values(null,'{$uniqid}','{$url}',{$task['level']},{$task['time']},{$task['type']},(SELECT unix_timestamp(now())),(SELECT unix_timestamp(now())+{$GLOBALS['TASKTIME']}+{$task['level']}*10),1,1,'{$GLOBALS['SPIDERNAME']}')");
+            mysqli_query(self::$mycon,"insert into onprocess values(null,'{$uniqid}','{$url}',{$task['level']},{$task['time']},{$task['type']},(SELECT unix_timestamp(now())),(SELECT unix_timestamp(now())+{$GLOBALS['TASKTIME']}),1,1,'{$GLOBALS['SPIDERNAME']}')");
 
 			if(mysqli_commit(self::$mycon)){
 				return mysqli_fetch_assoc( mysqli_query(self::$mycon,"select * from onprocess where uniqid='{$uniqid}' limit 1"));

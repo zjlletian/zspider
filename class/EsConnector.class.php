@@ -17,11 +17,9 @@ class ESConnector {
 	//测试是否连接到ES
 	static function testConnect(){
 		$testquery=[
-			"query"=>[
-				"match_all"=>[]
-			]
+			"query"=>[]
 		];
-		return self::search("","",$testquery)!=false;
+		return self::search("_cluster","state",$testquery)!=false;
 	}
 
 	//创建Index

@@ -27,6 +27,9 @@ if(!ESConnector::testConnect()){
 	exit();
 }
 
+//清空原有pid
+exec('rm -rf '.APPROOT.'/pids');
+
 //报告爬虫状态
 $pid = pcntl_fork();
 if(!$pid) {
@@ -62,9 +65,10 @@ for($count=1; $count<=$GLOBALS['MAX_PARALLEL']; $count++){
 Util::echoRed("[".date("Y-m-d H:i:s")."] All TaskHandler progress exit.\n");
 Util::putErrorLog("---------------------- All TaskHandler progress exit -----------------------\r\n\r\n");
 
-//向服务器报告在线状态
+//向服务器报告状态以及停止超时子进程
 function reportSpider(){
 	while(true){
+		Util::killPid($GLOBALS['TASKTIME']+60);
 		$data = array ('name' =>$GLOBALS['SPIDERNAME']);
 		$ch = curl_init ();
 		curl_setopt ( $ch, CURLOPT_URL, $GLOBALS['REPORTADDR'] );
@@ -73,6 +77,6 @@ function reportSpider(){
 		curl_setopt ( $ch, CURLOPT_RETURNTRANSFER, 1 );
 		curl_setopt ( $ch, CURLOPT_POSTFIELDS, $data );
 		curl_exec ( $ch );
-		sleep(20);
+		sleep(10);
 	}
 }
