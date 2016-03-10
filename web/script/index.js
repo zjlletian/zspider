@@ -156,7 +156,7 @@ function loadDocCount(){
         var option = {
             title: {
                 text:'24小时内获取文档数量 ( 新增 '+data.new+'  更新 '+data.update+' )',
-                subtext:'基于 '+timefrom.substr(0,16)+' 至 '+timeto.substr(0,16)+' Elasticsearch日志分析',
+                subtext:'基于 '+timefrom.substr(0,16)+' 至 '+timeto.substr(0,16)+' 任务日志分析',
                 x: 'center',
                 top:-8
             },
@@ -239,8 +239,8 @@ function loadAvgTime(){
 	$.get("/json/avgtime?r="+Math.random(),function(data){
 		var option = {
 	        title: {
-	            text:'单文档处理周期 '+data.total+'s (实时)',
-	            subtext:'基于 '+getTimeStr(-120).substr(11,5)+' 至 '+getTimeStr(-60).substr(11,5)+' Elasticsearch日志平均速度分析',
+	            text:'单文档处理周期 '+data.total+'s ( 平均链接数 '+parseInt(data.newlinks)+')',
+	            subtext:'基于 '+getTimeStr(-120).substr(11,5)+' 至 '+getTimeStr(-60).substr(11,5)+' 任务日志分析',
 	            x:'center',
 	            top:15
 	        },

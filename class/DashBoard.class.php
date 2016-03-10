@@ -157,6 +157,11 @@ class Dashboard{
                     "avg"=>[
                         "field"=> "timeinfo.submit"
                     ]
+                ],
+                "avgnewlinks"=>[
+                    "avg"=>[
+                        "field"=> "newlinks"
+                    ]
                 ]
             ]
         ];

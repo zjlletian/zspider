@@ -78,6 +78,9 @@ class Storager{
 							'properties' => [
 								'total'=>[
 									'type' => 'float'
+								],
+								'submit'=>[
+									'type' => 'float'
 								]
 							]
 						]
@@ -85,8 +88,8 @@ class Storager{
 	            ],
 	            'success' => [
 					'properties' => [
-					'timeinfo' => [
-						'properties' => [
+						'timeinfo' => [
+							'properties' => [
 								'gettask'=>[
 									'type' => 'float'
 								],
@@ -101,11 +104,11 @@ class Storager{
 								],
 								'saveinfo'=>[
 									'type' => 'float'
-								],
-								'submit'=>[
-									'type' => 'float'
 								]
 							]
+						],
+						'newlinks' => [
+							'type' => 'long'
 						]
 					]
 				],

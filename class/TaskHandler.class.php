@@ -28,6 +28,9 @@ class TaskHandler {
 		//连接到ES,创建索引
 		Storager::initIndex();
 
+		//连接到redis,将新链接缓存
+		NewLinkCache::connect();
+
 		//循环获取任务
 		while(true){
 			Util::writePid(self::$pid);
@@ -113,6 +116,7 @@ class TaskHandler {
 			if(!isset($urlinfo['error'])){
 				$log['url']=$urlinfo['url'];
 				$log['level']=$urlinfo['level'];
+				$log['newlinks']=count($urlinfo['links']);
 				$log['timeinfo']=$urlinfo['timeinfo'];
 				$log['timeinfo']['gettask']=$gettasktime;
 				$log['timeinfo']['saveinfo']=$savetime;
@@ -123,6 +127,7 @@ class TaskHandler {
 			else{
 				$log['error']=$urlinfo['error'];
 				$log['timeinfo']['total']=$totaltime;
+				$log['timeinfo']['submit']=$submittime;
 				$logtype="error";
 			}
 			Storager::putLog($log,$logtype);

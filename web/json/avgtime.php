@@ -15,4 +15,5 @@ $result["extarct"]=$logcount["avgtotal"]["value"]==null? 0 : round($logcount["av
 $result["findlinks"]=$logcount["avgtotal"]["value"]==null? 0 : round($logcount["avgfindlinks"]["value"],3);
 $result["saveinfo"]=$logcount["avgtotal"]["value"]==null? 0 : round($logcount["avgsaveinfo"]["value"],3);
 $result["submit"]=$logcount["avgtotal"]["value"]==null? 0 : round($logcount["avgsubmit"]["value"],3);
+$result["newlinks"]=$logcount["avgnewlinks"]["value"]==null? 0 : round($logcount["avgnewlinks"]["value"],3);
 echo json_encode($result);
