@@ -54,15 +54,19 @@ Util::putErrorLog("Create TaskHandler done, running TaskHandler progress:".$coun
 while($count!=0){
 	pcntl_wait($status);
 	$count=Util::getHandlerCount();
-	Util::echoRed("[".date("Y-m-d H:i:s")."] One TaskHandler stoped. running TaskHandler progress:".$count."\n");
+	Util::echoRed("[".date("Y-m-d H:i:s")."] One TaskHandler stoped. running TaskHandler progress:".$count."\n\n");
 
 	//在网络正常以及ES连接正常时，重启爬虫处理进程至最大进程数
 	if(!Util::isNetError() && ESConnector::testConnect()){
-		for($i=0;$i<($GLOBALS['MAX_PARALLEL']-$count); $i++){
+		while ($count<$GLOBALS['MAX_PARALLEL']) {
 			TaskHandler::createProgress($hash);
 			$hash=($hash+mt_rand(10,20))%300;
+			$count++;
+			Util::echoYellow("[".date("Y-m-d H:i:s")."] Restart a TaskHandlers. running TaskHandler progress:".$count."\n\n");
 		}
-		Util::echoYellow("[".date("Y-m-d H:i:s")."] Restart ".($GLOBALS['MAX_PARALLEL']-$count)." TaskHandlers. running TaskHandler progress:".$GLOBALS['MAX_PARALLEL']."\n\n");
+	}
+	else{
+		Util::echoRed("[".date("Y-m-d H:i:s")."] Network or es error,will not restart progress.\n\n");
 	}
 }
 
