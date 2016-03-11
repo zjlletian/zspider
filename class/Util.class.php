@@ -107,6 +107,7 @@ class Util{
 	//kill超时pid
 	static function killPid($maxtime){
 		$pidpath=APPROOT."/pids";
+		$count=0;
 		if(file_exists($pidpath)){
 			foreach(new FilesystemIterator($pidpath, FilesystemIterator::SKIP_DOTS ) as $pidfile) {
 				$pid=trim($pidfile->getFilename(),'.pid');
@@ -114,10 +115,25 @@ class Util{
 				if($time<time()-$maxtime){
 					Util::echoRed("[".date("Y-m-d H:i:s")."] kill Handler,task has used ".(time()-$time)."s, max time is ".$maxtime."s, PID:".$pid."\n\n");
 					Util::putErrorLog("kill Handler,task has used ".(time()-$time)."s, max time is ".$maxtime."s, PID:".$pid."\r\n\r\n");
-					exec("kill -9 ".$pid);
 					unlink($pidfile);
+					exec("kill -9 ".$pid);
+				}
+				else{
+					$count++;
 				}
 			}
 		}
+		return $count;
+	}
+
+	static function getHandlerCount(){
+		$pidpath=APPROOT."/pids";
+		$count=0;
+		if(file_exists($pidpath)){
+			foreach(new FilesystemIterator($pidpath, FilesystemIterator::SKIP_DOTS ) as $pidfile) {
+				$count++;
+			}
+		}
+		return $count;
 	}
 }

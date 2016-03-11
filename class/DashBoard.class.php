@@ -19,8 +19,8 @@ class Dashboard{
     }
 
     //爬虫状态报告（用于爬虫post）
-    static function spiderReport($name,$ip){
-        mysqli_query(self::$mycon,"replace into spiders values(null,'{$name}','{$ip}',(SELECT unix_timestamp(now())))");
+    static function spiderReport($name,$ip,$count){
+        mysqli_query(self::$mycon,"replace into spiders values(null,'{$name}','{$ip}',(SELECT unix_timestamp(now())),{$count})");
         return  array("status"=>1);
     }
 

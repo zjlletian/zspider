@@ -80,13 +80,11 @@ class TaskManager {
 		//当level>0时，将连接加入队列，否则记录错误
 		if(!isset($urlinfo['error'])){
 			if($urlinfo['level']>0 && count($urlinfo['links'])>0){
-				$sql="";
 				$level=$urlinfo['level']-1;
 				foreach ($urlinfo['links'] as $url) {
 					$url= mysqli_escape_string(self::$mycon,$url);
-					$sql+="insert into newlinks values(null,'{$url}',{$level});";
+					mysqli_query(self::$mycon,"insert into newlinks values(null,'{$url}',{$level});");
 				}
-				mysqli_multi_query(self::$mycon,$sql);
 			}
 		}
 		else{

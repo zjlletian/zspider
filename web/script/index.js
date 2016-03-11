@@ -24,7 +24,7 @@ function showtask(){
 }
 
 //加载队列与在线爬虫列表
-var spiderinfoh='<tr><th>机器标识</th> <th>IP</th> <th>实时任务数量</th> </tr>';
+var spiderinfoh='<tr><th>机器标识</th> <th>IP</th> <th>进程数</th> </tr>';
 var spiderinfo='<tr><td>{$name}</td> <td>{$ip}</td> <td>{$tasks}</td> </tr>';
 function loadQueueInfo(){
     $.get('/json/queueinfo.php?r='+Math.random(),function(data){
@@ -36,7 +36,7 @@ function loadQueueInfo(){
         $('#spidercount').html(data.spiders.length);
         slist=spiderinfoh;
         for(var i=0;i<data.spiders.length;i++){
-            slist+=spiderinfo.replace('{$name}',data.spiders[i].name).replace('{$ip}',data.spiders[i].ip).replace('{$tasks}',data.spiders[i].tasks);
+            slist+=spiderinfo.replace('{$name}',data.spiders[i].name).replace('{$ip}',data.spiders[i].ip).replace('{$tasks}',data.spiders[i].tasks+'/'+data.spiders[i].handler);
         }
         $('#spiderlist').html(slist);
         setTimeout("loadQueueInfo()",1000);

@@ -42,23 +42,27 @@ Util::putErrorLog("---------------------- Create progress for TaskHandler ------
 $hash=0;
 
 //批量创建爬虫进程
-for($count=1; $count<=$GLOBALS['MAX_PARALLEL']; $count++){
+$count=0;
+for(;$count<$GLOBALS['MAX_PARALLEL']; $count++){
 	TaskHandler::createProgress($hash);
 	$hash=($hash+mt_rand(10,20))%300;
 }
-Util::echoGreen("[".date("Y-m-d H:i:s")."] Create TaskHandler done, running TaskHandler progress:".$GLOBALS['MAX_PARALLEL']."\n\n");
-Util::putErrorLog("Create TaskHandler done, running TaskHandler progress:".$GLOBALS['MAX_PARALLEL']."\r\n");
+Util::echoGreen("[".date("Y-m-d H:i:s")."] Create TaskHandler done, running TaskHandler progress:".$count."\n\n");
+Util::putErrorLog("Create TaskHandler done, running TaskHandler progress:".$count."\r\n");
 
 //检测子进程退出状态
-for($count=1; $count<=$GLOBALS['MAX_PARALLEL']; $count++){
+while($count!=0){
 	pcntl_wait($status);
-	Util::echoRed("[".date("Y-m-d H:i:s")."] One TaskHandler stoped. running TaskHandler progress:".($GLOBALS['MAX_PARALLEL']-$count)."\n");
-	//在网络正常以及ES连接正常
+	$count=Util::getHandlerCount();
+	Util::echoRed("[".date("Y-m-d H:i:s")."] One TaskHandler stoped. running TaskHandler progress:".$count."\n");
+
+	//在网络正常以及ES连接正常时，重启爬虫处理进程至最大进程数
 	if(!Util::isNetError() && ESConnector::testConnect()){
-		TaskHandler::createProgress($hash);
-		$hash=($hash+mt_rand(10,20))%300;
-		$count--;
-		Util::echoYellow("[".date("Y-m-d H:i:s")."] Restart a TaskHandler. running TaskHandler progress:".($GLOBALS['MAX_PARALLEL']-$count)."\n\n");
+		for($i=0;$i<($GLOBALS['MAX_PARALLEL']-$count); $i++){
+			TaskHandler::createProgress($hash);
+			$hash=($hash+mt_rand(10,20))%300;
+		}
+		Util::echoYellow("[".date("Y-m-d H:i:s")."] Restart ".($GLOBALS['MAX_PARALLEL']-$count)." TaskHandlers. running TaskHandler progress:".$GLOBALS['MAX_PARALLEL']."\n\n");
 	}
 }
 
@@ -68,15 +72,14 @@ Util::putErrorLog("---------------------- All TaskHandler progress exit --------
 //向服务器报告状态以及停止超时子进程
 function reportSpider(){
 	while(true){
-		Util::killPid($GLOBALS['TASKTIME']+60);
-		$data = array ('name' =>$GLOBALS['SPIDERNAME']);
+		$data = array ('name' =>$GLOBALS['SPIDERNAME'],"count"=>Util::killPid($GLOBALS['TASKTIME']+150));
 		$ch = curl_init ();
 		curl_setopt ( $ch, CURLOPT_URL, $GLOBALS['REPORTADDR'] );
 		curl_setopt ( $ch, CURLOPT_POST, 1 );
 		curl_setopt ( $ch, CURLOPT_HEADER, 0 );
 		curl_setopt ( $ch, CURLOPT_RETURNTRANSFER, 1 );
 		curl_setopt ( $ch, CURLOPT_POSTFIELDS, $data );
-		curl_exec ( $ch );
-		sleep(10);
+		echo curl_exec ( $ch );
+		sleep(5);
 	}
 }
