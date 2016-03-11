@@ -158,7 +158,7 @@ function loadDocCount(){
                 text:'24小时内获取文档数量 ( 新增 '+data.new+'  更新 '+data.update+' )',
                 subtext:'基于 '+timefrom.substr(0,16)+' 至 '+timeto.substr(0,16)+' 任务日志分析',
                 x: 'center',
-                top:-8
+                top:-5
             },
             legend: {
                 data:['新增','更新'],

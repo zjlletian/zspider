@@ -28,9 +28,6 @@ class TaskHandler {
 		//连接到ES,创建索引
 		Storager::initIndex();
 
-		//连接到redis,将新链接缓存
-		NewLinkCache::connect();
-
 		//循环获取任务
 		while(true){
 			Util::writePid(self::$pid);
