@@ -21,8 +21,7 @@ if(Util::isNetError()){
 }
 
 //检查ES是否可以连接
-ESConnector::connect();
-if(!ESConnector::testConnect()){
+if(Util::isNetError($GLOBALS['ELASTICSEARCH'][0])){
 	Util::putErrorLog("Start failed, can not connect to elasticsearch.\r\n");
 	exit();
 }
@@ -57,7 +56,10 @@ while($count!=0){
 	Util::echoRed("[".date("Y-m-d H:i:s")."] One TaskHandler stoped. running TaskHandler progress:".$count."\n\n");
 
 	//在网络正常以及ES连接正常时，重启爬虫处理进程至最大进程数
-	if(!Util::isNetError() && ESConnector::testConnect()){
+	if(Util::isNetError() || Util::isNetError($GLOBALS['ELASTICSEARCH'][0])){
+		Util::echoRed("[".date("Y-m-d H:i:s")."] Network or es error,will not restart progress.\n\n");
+	}
+	else {
 		while ($count<$GLOBALS['MAX_PARALLEL']) {
 			TaskHandler::createProgress($hash);
 			$hash=($hash+mt_rand(10,20))%300;
@@ -65,9 +67,7 @@ while($count!=0){
 			Util::echoYellow("[".date("Y-m-d H:i:s")."] Restart a TaskHandlers. running TaskHandler progress:".$count."\n\n");
 		}
 	}
-	else{
-		Util::echoRed("[".date("Y-m-d H:i:s")."] Network or es error,will not restart progress.\n\n");
-	}
+	sleep(1);
 }
 
 Util::echoRed("[".date("Y-m-d H:i:s")."] All TaskHandler progress exit.\n");
@@ -76,7 +76,7 @@ Util::putErrorLog("---------------------- All TaskHandler progress exit --------
 //向服务器报告状态以及停止超时子进程
 function reportSpider(){
 	while(true){
-		$data = array ('name' =>$GLOBALS['SPIDERNAME'],"count"=>Util::killPid($GLOBALS['TASKTIME']+150));
+		$data = array ('name' =>$GLOBALS['SPIDERNAME'],"count"=>Util::killPid($GLOBALS['TASKTIME']+30));
 		$ch = curl_init ();
 		curl_setopt ( $ch, CURLOPT_URL, $GLOBALS['REPORTADDR'] );
 		curl_setopt ( $ch, CURLOPT_POST, 1 );

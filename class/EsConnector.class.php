@@ -14,14 +14,6 @@ class ESConnector {
 		return true;
 	}
 
-	//测试是否连接到ES
-	static function testConnect(){
-		$testquery=[
-			"query"=>[]
-		];
-		return self::search("_cluster","state",$testquery)!=false;
-	}
-
 	//创建Index
 	static function createIndex($indexname,$body=null){
 		try{

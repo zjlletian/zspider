@@ -4,8 +4,8 @@ require_once(dirname(dirname(__FILE__)).'/Config.php');
 class Util{
 
 	//检查网络状态，如果网络不通畅则
-	static function isNetError(){  
-		return !@fopen('http://www.baidu.com',"r");
+	static function isNetError($url='http://www.baidu.com/'){
+		return !@fopen($url,"r");
 	}
 
 	//重命名以前的日志

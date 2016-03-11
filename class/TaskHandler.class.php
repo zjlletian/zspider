@@ -66,18 +66,18 @@ class TaskHandler {
 			}
 		}
 
-		//保存url信息到ES,最多尝试五次
+		//保存url信息到ES,最多尝试三次
 		$savenow=microtime(true);
 		if(!isset($urlinfo['error'])){
             $savesuc=false;
-            for($count=0;$count<5;$count++){
+            for($count=0;$count<3;$count++){
 				$savesuc=Storager::upsertUrlInfo($urlinfo)!=false;
                 if($savesuc){
                     break;
                 }
             }
 			if($savesuc==false){
-                if(!ESConnector::testConnect()){
+				if(Util::isNetError($GLOBALS['ELASTICSEARCH'][0])){
                     Util::putErrorLog("TaskHandler stop, url: ".self::$dealingTask['url']);
                     Util::putErrorLog("Message: Elasticsearch disconnect.\r\n");
                     Util::echoRed("[".date("Y-m-d H:i:s")."] Elasticsearch disconnect on dealing with ".TaskHandler::$dealingTask['url']."\n\n");
