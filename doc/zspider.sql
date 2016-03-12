@@ -1,18 +1,3 @@
-/*
-Navicat MySQL Data Transfer
-
-Source Server         : zhou-vm
-Source Server Version : 50629
-Source Host           : 192.168.1.105:3306
-Source Database       : zspider
-
-Target Server Type    : MYSQL
-Target Server Version : 50629
-File Encoding         : 65001
-
-Date: 2016-02-28 00:01:12
-*/
-
 SET FOREIGN_KEY_CHECKS=0;
 
 -- ----------------------------
@@ -90,6 +75,7 @@ CREATE TABLE `spiders` (
   `name` varchar(50) NOT NULL,
   `ip` varchar(64) NOT NULL DEFAULT '',
   `acktime` int(11) NOT NULL,
+  `handler` int(11) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `ip` (`ip`) USING BTREE
 ) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;

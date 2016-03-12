@@ -111,7 +111,7 @@ class Util{
 		if(file_exists($pidpath)){
 			foreach(new FilesystemIterator($pidpath, FilesystemIterator::SKIP_DOTS ) as $pidfile) {
 				$pid=trim($pidfile->getFilename(),'.pid');
-				$time=intval(file_get_contents($pidfile));
+				$time=intval(file_get_contents($pidpath."/".$pidfile->getFilename()));
 				if($time<time()-$maxtime){
 					Util::echoRed("[".date("Y-m-d H:i:s")."] kill Handler,task has used ".(time()-$time)."s, max time is ".$maxtime."s, PID:".$pid."\n\n");
 					Util::putErrorLog("kill Handler,task has used ".(time()-$time)."s, max time is ".$maxtime."s, PID:".$pid."\r\n\r\n");
