@@ -96,7 +96,7 @@ class Util{
 		$pidpath=APPROOT."/pids";
 		$pidfile=APPROOT."/pids/{$pid}.pid";
 		if(!file_exists($pidpath)){
-    		mkdir($pidpath);
+    		@mkdir($pidpath);
     	}
     	if(!file_exists($pidfile)){
     		touch($pidfile);

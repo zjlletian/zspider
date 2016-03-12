@@ -56,8 +56,13 @@ while($count!=0){
 	Util::echoRed("[".date("Y-m-d H:i:s")."] One TaskHandler stoped. running TaskHandler progress:".$count."\n\n");
 
 	//在网络正常以及ES连接正常时，重启爬虫处理进程至最大进程数
-	if(Util::isNetError() || Util::isNetError($GLOBALS['ELASTICSEARCH'][0])){
-		Util::echoRed("[".date("Y-m-d H:i:s")."] Network or es error,will not restart progress.\n\n");
+	if(Util::isNetError()){
+		Util::echoRed("[".date("Y-m-d H:i:s")."] Network error,will not restart progress.\n\n");
+		Util::putErrorLog("Network error,will not restart progress.\r\n\r\n");
+	}
+	elseif(Util::isNetError($GLOBALS['ELASTICSEARCH'][0])){
+		Util::echoRed("[".date("Y-m-d H:i:s")."] Elasticsearch error,will not restart progress.\n\n");
+		Util::putErrorLog("Elasticsearch error,will not restart progress.\r\n\r\n");
 	}
 	else {
 		while ($count<$GLOBALS['MAX_PARALLEL']) {

@@ -32,7 +32,7 @@ date_default_timezone_set('Asia/Shanghai');
 //--------------------------------- 爬虫处理规则配置 --------------------------------------
 
 //最大并行任务数量
-$GLOBALS['MAX_PARALLEL']=80;
+$GLOBALS['MAX_PARALLEL']=60;
 
 $GLOBALS['MAX_PARALLEL_QUEUE']=30;
 
