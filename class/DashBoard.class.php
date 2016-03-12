@@ -110,8 +110,8 @@ class Dashboard{
     static function getAvgTime($from, $to){
         $query=[
             "query"=> [
-                "bool"=> [ //filtered
-                    "must"=> [ //filter
+                "filtered"=> [
+                    "filter"=> [
                         "range"=> [
                             "time"=> [
                                 "gte"=>$from,
