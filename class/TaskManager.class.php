@@ -55,6 +55,7 @@ class TaskManager {
 
 	//提交任务执行结果
 	static function submitTask($task,$urlinfo){
+		$now=microtime(true);
 		$taskurl= mysqli_escape_string(self::$mycon,$task['url']);
 		$taskproc=mysqli_fetch_assoc( mysqli_query(self::$mycon,"select * from onprocess where url='{$taskurl}' limit 1"));
 		//检测任务是否已经被其他爬虫处理完毕
@@ -68,15 +69,15 @@ class TaskManager {
 			Util::echoRed("[".date("Y-m-d H:i:s")."] ".$str."\n\n");
 			return false;
 		}
-
+		$checktime=round(microtime(true)-$now,3);$now=microtime(true);
         //对执行结果分配更新任务,如果保存到ES失败,则继续处理
         if(!isset($urlinfo['error'])){
             self::addUpdateTask($urlinfo['url'],$urlinfo['level']);
         }
-
+        $updatetime=round(microtime(true)-$now,3);$now=microtime(true);
          //从正在执行的任务中移除
         mysqli_query(self::$mycon,"delete from onprocess where id=".$task['id']);
-
+        $deletetime=round(microtime(true)-$now,3);$now=microtime(true);
 		//当level>0时，将连接加入队列，否则记录错误
 		if(!isset($urlinfo['error'])){
 			if($urlinfo['level']>0 && count($urlinfo['links'])>0){
@@ -86,6 +87,9 @@ class TaskManager {
 					mysqli_query(self::$mycon,"insert into newlinks values(null,'{$url}',{$level});");
 				}
 			}
+			$addlinktime=round(microtime(true)-$now,3);$now=microtime(true);
+			$count=count($urlinfo['links']);
+			$submit="check:{$checktime}s update:{$updatetime}s delete:{$deletetime}s addlink:{$addlinktime} links:{$count}";
 		}
 		else{
 			$taskurl = mysqli_escape_string(self::$mycon,$task['url']);
@@ -107,8 +111,10 @@ class TaskManager {
             else if($urlinfo['code']==900){
                 mysqli_query(self::$mycon,"insert ignore into notupdate values(null,'{$taskurl}')"); //存入ES错误
             }
+            $markerrortime=round(microtime(true)-$now,3);$now=microtime(true);
+            $submit="check:{$checktime}s update:{$updatetime}s delete:{$deletetime}s markerror:{$markerrortime}";
 		}
-		return true;
+		return $submit;
 	}
 
 	//对执行结果分配更新任务

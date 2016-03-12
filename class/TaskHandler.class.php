@@ -102,7 +102,8 @@ class TaskHandler {
 
 		//提交任务执行结果,记录日志到ES
 		$submitnow=microtime(true);
-		if(TaskManager::submitTask($task,$urlinfo)){
+		$substr=TaskManager::submitTask($task,$urlinfo);
+		if($substr!=false){
 			$submittime=round(microtime(true)-$submitnow,3);
 			$totaltime=round(microtime(true)-$now,3);
 			$lognow=microtime(true);
@@ -131,11 +132,11 @@ class TaskHandler {
 			$logtime=round(microtime(true)-$lognow,3);
 
 			if(!isset($urlinfo['error']) && $GLOBALS['DEBUG']){
-				echo "Size:".round(strlen($urlinfo['text'])/1024,2)."KB Links:".count($urlinfo['links'])." Url: ".$task['url']."\n";
-				echo "Gettask:".$gettasktime."s download:".$urlinfo['timeinfo']['download']."s extarct:".$urlinfo['timeinfo']['extarct']."s findhref:".$urlinfo['timeinfo']['findlinks']."s saveinfo:".$savetime."s\n";
-				
+				$str= "Size:".round(strlen($urlinfo['text'])/1024,2)."KB Links:".count($urlinfo['links'])." Url: ".$task['url']."\n";
+				$str.="Process: gettask:".$gettasktime."s download:".$urlinfo['timeinfo']['download']."s extarct:".$urlinfo['timeinfo']['extarct']."s findhref:".$urlinfo['timeinfo']['findlinks']."s saveinfo:".$savetime."s\n";
+				$str.="Submit: ".$substr."\n";
 				$sum=$proctime+$submittime+$logtime;
-				echo "Proc:".$proctime."s(".round($proctime/$sum*100,1)."%) Submit:".$submittime."s(".round($submittime/$sum*100,1)."%) Log:".$logtime."s(".round($logtime/$sum*100,1)."%)\n\n";
+				echo $str."Process:".$proctime."s(".round($proctime/$sum*100,1)."%) Submit:".$submittime."s(".round($submittime/$sum*100,1)."%) Log:".$logtime."s(".round($logtime/$sum*100,1)."%)\n\n";
 			}
 		}
 		unset($log);
