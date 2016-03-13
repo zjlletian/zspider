@@ -116,16 +116,6 @@ class ESConnector {
 		}
 	}
 
-	//更新document curl方式
-	static function updateDocByDoc_curl($index,$type,$id,$docbody,$upsert=null,$timeout=null){
-		$params['doc'] =$docbody;
-		if($upsert!=null){
-			$params['upsert'] = $upsert;
-		}
-		$data = json_encode($params);
-		return Util::urlPost("{$GLOBALS['ELASTICSEARCH'][0]}/{$index}/{$type}/{$id}",$data,$timeout,true);
-	}
-
 	//使用script更新document
 	static function updateDocByScript($index,$type,$id,$script,$args,$upsert=null){
 		try{

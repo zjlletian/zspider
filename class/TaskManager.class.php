@@ -87,9 +87,9 @@ class TaskManager {
 					mysqli_query(self::$mycon,"insert into newlinks values(null,'{$url}',{$level});");
 				}
 			}
-			$addlinktime=round(microtime(true)-$now,3);$now=microtime(true);
+			$addlinktime=round(microtime(true)-$now,3);
 			$count=count($urlinfo['links']);
-			$submit="check:{$checktime}s update:{$updatetime}s delete:{$deletetime}s addlink:{$addlinktime} links:{$count}";
+			$submit="check:{$checktime}s update:{$updatetime}s delete:{$deletetime}s addlink:{$addlinktime}s newlinks:{$count}";
 		}
 		else{
 			$taskurl = mysqli_escape_string(self::$mycon,$task['url']);
@@ -111,8 +111,8 @@ class TaskManager {
             else if($urlinfo['code']==900){
                 mysqli_query(self::$mycon,"insert ignore into notupdate values(null,'{$taskurl}')"); //存入ES错误
             }
-            $markerrortime=round(microtime(true)-$now,3);$now=microtime(true);
-            $submit="check:{$checktime}s update:{$updatetime}s delete:{$deletetime}s markerror:{$markerrortime}";
+            $markerrortime=round(microtime(true)-$now,3);
+            $submit="check:{$checktime}s update:{$updatetime}s delete:{$deletetime}s markerror:{$markerrortime}s";
 		}
 		return $submit;
 	}

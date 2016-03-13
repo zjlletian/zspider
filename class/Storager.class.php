@@ -10,6 +10,17 @@ class Storager{
 	static function initIndex(){
 		EsConnector::connect();
 		$paramsbody = [
+			'settings' => [
+				'number_of_shards' => 3,
+				'number_of_replicas' =>0,
+				'analysis'=> [
+					'analyzer' => [
+						"ik" => [
+							"tokenizer" =>  "ik"
+						]
+					]
+				]
+			],
 	    	'mappings' => [
 	            'html' => [
 	                'properties' => [
@@ -18,10 +29,12 @@ class Storager{
 	                        'type' => 'date'
 	                    ],
 	                    'url' => [
-	                        'type' => 'string'
+	                        'type' => 'string',
+							'analyzer' =>'ik'
 	                    ],
 	                    'title' => [
-	                        'type' => 'string'
+	                        'type' => 'string',
+							'analyzer' =>'ik'
 	                    ],
 	                    'view' => [
 	                        'type' => 'long'
@@ -31,7 +44,8 @@ class Storager{
 	                        'index' => 'not_analyzed'
 	                    ],
 	                    'text' => [
-	                        'type' => 'string'
+	                        'type' => 'string',
+							'analyzer' =>'ik'
 	                    ],
 	                    'md5' => [
 	                        'type' => 'string',
@@ -134,7 +148,7 @@ class Storager{
 		$urlinfo['md5']=md5($urlinfo['text']);
 		$upsert = $urlinfo;
 		$upsert['view'] = 0;
-		return EsConnector::updateDocByDoc_curl('zspider','html',md5($urlinfo['url']),$urlinfo,$upsert,30);
+		return EsConnector::updateDocByDoc('zspider','html',md5($urlinfo['url']),$urlinfo,$upsert);
 	}
 
 	//记录日志
@@ -145,6 +159,6 @@ class Storager{
 			self::$logindex="zspiderlog-".date("Y.m.d",$servertime);
 			self::creatLogIndex();
 		}
-		return EsConnector::insertDoc_curl(self::$logindex,$logtype,$servertime.uniqid(),$log,10);
+		return EsConnector::insertDoc(self::$logindex,$logtype,$servertime.uniqid(),$log);
 	}
 }
