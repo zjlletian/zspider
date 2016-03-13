@@ -81,14 +81,18 @@ Util::putErrorLog("---------------------- All TaskHandler progress exit --------
 //向服务器报告状态以及停止超时子进程
 function reportSpider(){
 	while(true){
-		$data = array ('name' =>$GLOBALS['SPIDERNAME'],"count"=>Util::killPid($GLOBALS['TASKTIME']+30));
+		$data =[
+			'name' =>$GLOBALS['SPIDERNAME'],
+			'handler'=>Util::killPid($GLOBALS['TASKTIME']+30),
+			'sysload'=>json_encode(Util::getSysLoad())
+		];
 		$ch = curl_init ();
 		curl_setopt ( $ch, CURLOPT_URL, $GLOBALS['REPORTADDR'] );
 		curl_setopt ( $ch, CURLOPT_POST, 1 );
 		curl_setopt ( $ch, CURLOPT_HEADER, 0 );
 		curl_setopt ( $ch, CURLOPT_RETURNTRANSFER, 1 );
 		curl_setopt ( $ch, CURLOPT_POSTFIELDS, $data );
-		echo curl_exec ( $ch );
-		sleep(5);
+		curl_exec ( $ch );
+		sleep(2);
 	}
 }

@@ -19,9 +19,13 @@ class Dashboard{
     }
 
     //爬虫状态报告（用于爬虫post）
-    static function spiderReport($name,$ip,$count){
-        mysqli_query(self::$mycon,"replace into spiders values(null,'{$name}','{$ip}',(SELECT unix_timestamp(now())),{$count})");
-        return  array("status"=>1);
+    static function spiderReport($name,$ip,$handler,$sysload){
+        if(mysqli_query(self::$mycon,"replace into spiders values(null,'{$name}','{$ip}',(SELECT unix_timestamp(now())),{$handler},'{$sysload}')")){
+            return  "save info suc";
+        }
+        else{
+            return  "save info failed";
+        }
     }
 
     //获取队列信息
@@ -37,9 +41,9 @@ class Dashboard{
         }
         $result->free();
 
-        //在线爬虫信息 (60秒内有报告信息的爬虫)
+        //在线爬虫信息 (20秒内有报告信息的爬虫)
         $queueinfo['spiders']=array();
-        $result=mysqli_query(self::$mycon,"select * from spiders where acktime>(SELECT unix_timestamp(now())-60)");
+        $result=mysqli_query(self::$mycon,"select * from spiders where acktime>(SELECT unix_timestamp(now())-20)");
         while($spider=mysqli_fetch_assoc($result)){
             $spider['tasks']=0;
             foreach ($spidertask as $st) {
@@ -47,6 +51,7 @@ class Dashboard{
                     $spider['tasks']=$st['tasks'];
                 }
             }
+            $spider['sysload']=json_decode($spider['sysload'],true);
             $queueinfo['spiders'][]=$spider;
         }
         $result->free();

@@ -76,6 +76,7 @@ CREATE TABLE `spiders` (
   `ip` varchar(64) NOT NULL DEFAULT '',
   `acktime` int(11) NOT NULL,
   `handler` int(11) NOT NULL DEFAULT '0',
+  `sysload` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `ip` (`ip`) USING BTREE
 ) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
