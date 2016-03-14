@@ -14,18 +14,27 @@ function showdoc(){
     showtaskb=false;
     $('#docboard').css("display","");
     $('#taskboard').css("display","none");
+    $('#spiderboard').css("display","none");
 }
 
 function showtask(){
     showtaskb=true;
     $('#docboard').css("display","none");
     $('#taskboard').css("display","");
+    $('#spiderboard').css("display","none");
     loadTaskList();
 }
 
+function showspiders(){
+    showtaskb=false;
+    $('#docboard').css("display","none");
+    $('#taskboard').css("display","none");
+    $('#spiderboard').css("display","");
+}
+
 //加载队列与在线爬虫列表
-var spiderinfoh='<tr><th>机器标识</th> <th>IP</th> <th>进程数</th> </tr>';
-var spiderinfo='<tr><td>{$name}</td> <td>{$ip}</td> <td>{$tasks}</td> </tr>';
+var spiderinfoh='<tr><th width="80px">机器标识</th> <th width="90px">IP</th> <th width="60px">进程</th> <th width="40px">状态</th></tr>';
+var spiderinfo='<tr><td>{$name}</td> <td>{$ip}</td> <td>{$tasks}</td><td><div style="width: 12px;height: 12px;border-radius:6px;background:{$color}"></div></td> </tr>';
 function loadQueueInfo(){
     $.get('/json/queueinfo.php?r='+Math.random(),function(data){
         //队列任务信息
@@ -36,9 +45,19 @@ function loadQueueInfo(){
         $('#spidercount').html(data.spiders.length);
         slist=spiderinfoh;
         for(var i=0;i<data.spiders.length;i++){
-            slist+=spiderinfo.replace('{$name}',data.spiders[i].name).replace('{$ip}',data.spiders[i].ip).replace('{$tasks}',data.spiders[i].tasks+'/'+data.spiders[i].handler);
+            if(data.spiders[i].sysload.cpuload<2){
+                color='green';
+            }
+            else if(data.spiders[i].sysload.cpuload<5){
+                color='orangered';
+            }
+            else{
+                color='red';
+            }
+            slist+=spiderinfo.replace('{$name}',data.spiders[i].name).replace('{$ip}',data.spiders[i].ip).replace('{$tasks}',data.spiders[i].tasks+'/'+data.spiders[i].handler).replace('{$color}',color);
         }
         $('#spiderlist').html(slist);
+        $('[data-toggle="tooltip"]').tooltip();
         setTimeout("loadQueueInfo()",1000);
     });
 }
@@ -172,10 +191,7 @@ function loadDocCount(){
             },
             yAxis: {
                 type: 'value',
-                name: '处理速度(个/分钟)',
-                splitLine: {
-                    show:false
-                }
+                name: '处理速度(个/分钟)'
             },
             series: [{
                 name: '新增',

@@ -13,7 +13,7 @@
 <body>
 <div class="container-fluid" style="width:1250px">
 	<div class="row">
-		<div class="col-md-4" style="width:400px; float:left;">
+		<div class="col-md-4" style="width:420px; float:left;">
 			<div class="row">
 				<div class="col-md-12">
 					<h2>&nbsp;ZSpider DashBoard</h2>
@@ -22,7 +22,8 @@
 			<div class="row bs-callout bs-callout-info" style="padding-bottom: 0; ">
 				<div class="col-md-12">
 					<h4  style="display:inline;">文档数量信息</h4>&nbsp;&nbsp;
-					<button type="button" class="btn btn-info btn-xs hbtn" onclick="showdoc()">显示日志信息</button><br><br>
+					<button type="button" class="btn btn-info btn-xs hbtn" onclick="showdoc()">显示日志信息</button>
+					<br><br>
 					<table class="table">
 						<tr><td style="width:200px;">已存文档总量</td><td id="totaldoc">loading</td></tr>
 						<tr><td>今日新增总量</td><td id="todaynew">loading</td></tr>
@@ -34,7 +35,8 @@
 			<div class="row bs-callout bs-callout-warning" style="padding-bottom: 0; ">
 				<div class="col-md-12">
 					<h4  style="display:inline;">队列任务信息</h4>&nbsp;&nbsp;
-					<button type="button" class="btn btn-warning btn-xs hbtn" onclick="showtask()">实时任务进度</button><br><br>
+					<button type="button" class="btn btn-warning btn-xs hbtn" onclick="showtask()">实时任务进度</button>
+					<br><br>
 					<table class="table" id="queueinfo">
 						<tr><td style="width:200px;">待爬取新网页数量</td><td id="newtask">loading</td></tr>
 						<tr><td>需要更新网页数量</td><td id="updatetask">loading</td></tr>
@@ -43,18 +45,21 @@
 			</div>
 			<div class="row bs-callout bs-callout-danger" style="padding-bottom: 0; ">
 				<div class="col-md-12">
-					<h4  style="display:inline;">在线爬虫列表 </h4>&nbsp;&nbsp;
-					<span class="badge hbtn" id='spidercount'>loading</span><br><br>
+					<h4  style="display:inline;">爬虫集群列表</h4>&nbsp;&nbsp;
+					<button class="btn btn-danger btn-xs hbtn" type="button" onclick="showspiders()">
+						节点负载信息&nbsp;&nbsp;<span class="badge" id='spidercount' style="margin-top: -2px;">loading</span>
+					</button>
+					<br><br>
 					<table class="table" id="spiderlist"></table>
 				</div>
 			</div>
 		</div>
-		<div class="col-md-8" style="width:850px; float:left;">
+		<div class="col-md-8" style="width:830px; float:left;">
 			<div class="row" style="display:none;" id="docboard">
 				<div class="col-md-12">
 					<div class="row">
 						<br>
-						<div id="doccount" style="width:850px; height:300px; float:left;" ></div>	
+						<div id="doccount" style="width:800px; height:300px; float:left;" ></div>
 					</div>
 					<div class="row">
 						<div id="avgtime" style="width:400px; height:350px; float:left;"></div>
@@ -65,6 +70,12 @@
 			<div class="row"  style="display:none;" id="taskboard">
 				<h3 id="onprocess">实时任务进度&nbsp;&nbsp;( loading )</h3>
 				<div class="col-md-12" id="tasks" style="width:800px;"></div>
+			</div>
+			<div class="row"  style="display:none;" id="spiderboard">
+				<h3>爬虫节点负载信息</h3>
+				<div class="col-md-12" id="spiders" style="width:800px;">
+
+				</div>
 			</div>
 		</div>
 	</div>
