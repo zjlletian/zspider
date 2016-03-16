@@ -44,20 +44,25 @@ function loadQueueInfo(){
         //在线爬虫机器
         $('#spidercount').html(data.spiders.length);
         slist=spiderinfoh;
+        tasks=0;
         for(var i=0;i<data.spiders.length;i++){
-            if(data.spiders[i].sysload.cpuload<2){
-                color='green';
-            }
-            else if(data.spiders[i].sysload.cpuload<5){
-                color='orangered';
-            }
-            else{
+            if(data.spiders[i].sysload.cpuload>5 || data.spiders[i].sysload.cpuused>90  || (data.spiders[i].sysload.memused/data.spiders[i].sysload.memtotal)>0.9){
                 color='red';
             }
-            slist+=spiderinfo.replace('{$name}',data.spiders[i].name).replace('{$ip}',data.spiders[i].ip).replace('{$tasks}',data.spiders[i].tasks+'/'+data.spiders[i].handler).replace('{$color}',color);
+            else if(data.spiders[i].sysload.cpuload>3 || data.spiders[i].sysload.cpuused>70  || (data.spiders[i].sysload.memused/data.spiders[i].sysload.memtotal)>0.7){
+                color='orangered';
+            }
+            else if(data.spiders[i].sysload.cpuload>1.5 || data.spiders[i].sysload.cpuused>50  || (data.spiders[i].sysload.memused/data.spiders[i].sysload.memtotal)>0.5){
+                color='orange';
+            }
+            else{
+                 color='green';
+            }
+            slist+=spiderinfo.replace('{$name}',data.spiders[i].name).replace('{$ip}',data.spiders[i].ip).replace('{$tasks}',data.spiders[i].sysload.running+'/'+data.spiders[i].handler).replace('{$color}',color);
+            tasks+=parseInt(data.spiders[i].tasks);
         }
         $('#spiderlist').html(slist);
-        $('[data-toggle="tooltip"]').tooltip();
+        $('#onprosess').html(tasks);
         setTimeout("loadQueueInfo()",1000);
     });
 }
@@ -69,6 +74,7 @@ function loadTotalDoc(){
         setTimeout("loadTotalDoc()",1000);
     });
 }
+
 //今日文档数量
 function loadTodayDoc(){
     $.get('/json/countlog.php?type=success&intv=24h&r='+Math.random(),function(data){
@@ -78,56 +84,101 @@ function loadTodayDoc(){
     });
 }
 
+//进度条信息展示
+var tasktemplet='<div id="taskdiv-{$id}"><a href="{$href}" target="_blank">{$hreftext}</a><br>' +
+    '执行爬虫:{$spider}&nbsp;&nbsp;&nbsp;次数:{$times}&nbsp;&nbsp;&nbsp;等级:{$level}&nbsp;&nbsp;&nbsp;类型:{$type}&nbsp;&nbsp;&nbsp;预定时间:{$time}&nbsp;&nbsp;&nbsp;延迟:{$delay}' +
+    '<div class="progress"><div id="pb-{$id}" class="progress-bar progress-bar-striped active progress-bar-success"  role="progressbar" style="text-align:left;padding-left:0.5%;min-width:4%;"' +
+    ' data-color="progress-bar-success" data-times="{$times}" data-cost="{$cost}" data-max="{$max}"></div></div></div>';
+var tasklist=[];
+var newtasklist=[];
+function timebarinc(barid) {
+    if (showtaskb && (tasklist.indexOf(barid) != -1 || newtasklist.indexOf(barid) != -1)) {
+        bar= $("#pb-"+barid);
+        times=parseInt(bar.attr('data-times'));
+        cost=parseFloat(bar.attr('data-cost'));
+        max=parseFloat(bar.attr('data-max'));
+
+        //设置进度条颜色
+        if(cost<10){
+            newcolor="progress-bar-success";
+         }
+         else if(cost<30){
+           newcolor="progress-bar-info";
+         }
+         else if(cost<max){
+            newcolor="progress-bar-warning";
+         }
+         else{
+           newcolor="progress-bar-danger";
+         }
+        if(bar.attr('data-color')!=newcolor){
+            bar.removeClass(bar.attr('data-color'));
+            bar.addClass(newcolor);
+            bar.attr('data-color',newcolor);
+        }
+
+         //设置进度条文字
+         if(cost<=max){
+             bar.html(parseInt(cost)+"/"+parseInt(max));
+         }
+         else if(times<4 && (10-cost+max)>=0 ){
+             bar.html('等待爬虫响应: '+(10-cost+max)+'秒后将转交给其他爬虫处理');
+         }
+         else if(times<4 && (10-cost+max)<0 ){
+             bar.html('任务超时：等待其他爬虫处理');
+         }
+         else if(times>=4 && (10-cost+max)>=0){
+             bar.html('等待爬虫响应: '+(10-cost+max)+'秒后任务将删除');
+         }
+         else{
+             bar.html('任务超时次数过多: 任务将删除');
+         }
+        bar.css('width',cost/max*100+'%');
+        bar.attr('data-cost',cost+0.1);
+        setTimeout("timebarinc('"+barid+"')", 100);
+    }
+    else{
+        fadeoutBar(barid);
+    }
+}
+
+//进度条淡出
+function fadeoutBar(barid){
+    $("#taskdiv-"+barid).fadeOut(300);
+    setTimeout("removeBar('"+barid+"')", 500);
+}
+
+//删除进度条节点
+function removeBar(barid){
+    $("#taskdiv-"+barid).remove();
+}
+
 //正在执行的任务信息
-var tasktemplet='<a href="{$href}" target="_blank">{$hreftext}</a><br>执行爬虫:{$spider}&nbsp;&nbsp;&nbsp;次数:{$times}&nbsp;&nbsp;&nbsp;等级:{$level}&nbsp;&nbsp;&nbsp;类型:{$type}&nbsp;&nbsp;&nbsp;预定时间:{$time}&nbsp;&nbsp;&nbsp;延迟:{$delay}<div id="{$id}p" class="progress"><div id="{$id}pb" class="progress-bar progress-bar-{$color} progress-bar-striped active" role="progressbar"style="text-align:left;padding-left:1%;min-width:6%;width:{$width}%">{$msg}</div></div>';
 function loadTaskList(){
     $.get('/json/tasklist.php?r='+Math.random(),function(tasks){
-        tlist='';
+        newtasklist=[];
         wait=0;
         error=0;
         for(i=0;i<tasks.length;i++){
-            taskbar=tasktemplet.replace('{$href}',tasks[i].url).replace('{$hreftext}',(tasks[i].url.length>80?tasks[i].url.substr(0,80)+'....':tasks[i].url));
-            taskbar=taskbar.replace('{$level}',tasks[i].level).replace('{$type}',(tasks[i].type==0?'新页面':'更新'));
-            taskbar=taskbar.replace('{$time}',tasks[i].time).replace('{$delay}',tasks[i].delay).replace('{$spider}',tasks[i].spider);
-            taskbar=taskbar.replace('{$id}',tasks[i].id).replace('{$id}',tasks[i].id);
-            taskbar=taskbar.replace('{$width}',tasks[i].cost/tasks[i].max*100).replace('{$times}',tasks[i].times);
-            //设置进度条颜色
-            if(tasks[i].cost<(0.2*tasks[i].max)){
-                taskbar=taskbar.replace('{$color}','success');
+            newtasklist.push(tasks[i].uniqid);
+            if(tasklist.indexOf(tasks[i].uniqid)==-1){
+                taskbar=tasktemplet.replace('{$id}',tasks[i].uniqid).replace('{$id}',tasks[i].uniqid);
+                taskbar=taskbar.replace('{$href}',tasks[i].url).replace('{$hreftext}',(tasks[i].url.length>100?tasks[i].url.substr(0,100)+'....':tasks[i].url));
+                taskbar=taskbar.replace('{$times}',tasks[i].times).replace('{$times}',tasks[i].times).replace('{$level}',tasks[i].level).replace('{$type}',(tasks[i].type==0?'新页面':'更新'));
+                taskbar=taskbar.replace('{$time}',tasks[i].time).replace('{$delay}',tasks[i].delay).replace('{$spider}',tasks[i].spider);
+                taskbar=taskbar.replace('{$cost}',tasks[i].cost).replace('{$max}',tasks[i].max);
+                $('#tasks').append(taskbar);
+                timebarinc(tasks[i].uniqid);
             }
-            else if(tasks[i].cost<(0.6*tasks[i].max)){
-                taskbar=taskbar.replace('{$color}','info');
-            }
-            else if(tasks[i].cost<tasks[i].max){
-                taskbar=taskbar.replace('{$color}','warning');
-            }
-            else{
-                taskbar=taskbar.replace('{$color}','danger');
-            }
-            //设置进度条文字
-            if(tasks[i].cost<=tasks[i].max){
-                taskbar=taskbar.replace('{$msg}',tasks[i].cost+"/"+tasks[i].max);
-            }
-            else if(tasks[i].times<4 && (10-tasks[i].cost+tasks[i].max)>=0 ){
+             if((tasks[i].cost>tasks[i].max)&&10-tasks[i].cost+tasks[i].max>=0 ){
                 wait+=1;
-                taskbar=taskbar.replace('{$msg}','等待爬虫响应: '+(10-tasks[i].cost+tasks[i].max)+'秒后将转交给其他爬虫处理');
             }
-            else if(tasks[i].times<4 && (10-tasks[i].cost+tasks[i].max)<0 ){
+            else if(tasks[i].cost>tasks[i].max){
                 error+=1;
-                taskbar=taskbar.replace('{$msg}','任务超时：等待其他爬虫处理');
             }
-            else if(tasks[i].times>=4 && (10-tasks[i].cost+tasks[i].max)>=0){
-                wait+=1;
-                taskbar=taskbar.replace('{$msg}','等待爬虫响应: '+(10-tasks[i].cost+tasks[i].max)+'秒后任务将删除');
-            }
-            else{
-                error+=1;
-                taskbar=taskbar.replace('{$msg}','任务超时次数过多: 任务将删除');
-            }
-            tlist+=taskbar;
         }
-        $('#tasks').html(tlist);
-        $('#onprocess').html('实时任务进度&nbsp;&nbsp;( 执行:'+(tasks.length-error)+'&nbsp;&nbsp;等待:'+wait+'&nbsp;&nbsp;超时:'+error+' )');
+        tasklist=newtasklist;
+        $('#onprocess').html('实时任务进度&nbsp;&nbsp;( 执行:'+(tasks.length-wait-error)+'&nbsp;&nbsp;等待:'+wait+'&nbsp;&nbsp;超时:'+error+' )');
         if(showtaskb){
         	setTimeout("loadTaskList()",1000);
     	}

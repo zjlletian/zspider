@@ -22,7 +22,7 @@
 			<div class="row bs-callout bs-callout-info" style="padding-bottom: 0; ">
 				<div class="col-md-12">
 					<h4  style="display:inline;">文档数量信息</h4>&nbsp;&nbsp;
-					<button type="button" class="btn btn-info btn-xs hbtn" onclick="showdoc()">显示日志信息</button>
+					<button type="button" class="btn btn-info btn-xs hbtn" onclick="showdoc()">文档日志监控</button>
 					<br><br>
 					<table class="table">
 						<tr><td style="width:200px;">已存文档总量</td><td id="totaldoc">loading</td></tr>
@@ -35,7 +35,10 @@
 			<div class="row bs-callout bs-callout-warning" style="padding-bottom: 0; ">
 				<div class="col-md-12">
 					<h4  style="display:inline;">队列任务信息</h4>&nbsp;&nbsp;
-					<button type="button" class="btn btn-warning btn-xs hbtn" onclick="showtask()">实时任务进度</button>
+					<button type="button" class="btn btn-warning btn-xs hbtn" onclick="showtask()">
+						实时任务进度&nbsp;&nbsp;
+						<span class="badge" id='onprosess' style="margin-top: -2px;">loading</span>
+					</button>
 					<br><br>
 					<table class="table" id="queueinfo">
 						<tr><td style="width:200px;">待爬取新网页数量</td><td id="newtask">loading</td></tr>
@@ -47,7 +50,8 @@
 				<div class="col-md-12">
 					<h4  style="display:inline;">爬虫集群列表</h4>&nbsp;&nbsp;
 					<button class="btn btn-danger btn-xs hbtn" type="button" onclick="showspiders()">
-						节点负载信息&nbsp;&nbsp;<span class="badge" id='spidercount' style="margin-top: -2px;">loading</span>
+						节点负载信息&nbsp;&nbsp;
+						<span class="badge" id='spidercount' style="margin-top: -2px;">loading</span>
 					</button>
 					<br><br>
 					<table class="table" id="spiderlist"></table>
@@ -84,6 +88,5 @@
 <script src="//cdn.bootcss.com/jquery/1.11.3/jquery.min.js"></script>
 <script src="//cdn.bootcss.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
 <script src="/script/echarts.min.js"></script>
-<script src="/script/dark.js"></script>
 <script src="/script/index.js"></script>
 </html>
