@@ -12,6 +12,8 @@ var showtaskb=false;
 
 function showdoc(){
     showtaskb=false;
+    newtasklist=[];
+    tasklist=[];
     $('#docboard').css("display","");
     $('#taskboard').css("display","none");
     $('#spiderboard').css("display","none");
@@ -19,6 +21,8 @@ function showdoc(){
 
 function showtask(){
     showtaskb=true;
+    newtasklist=[];
+    tasklist=[];
     $('#docboard').css("display","none");
     $('#taskboard').css("display","");
     $('#spiderboard').css("display","none");
