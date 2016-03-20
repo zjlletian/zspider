@@ -6,23 +6,12 @@ SET FOREIGN_KEY_CHECKS=0;
 DROP TABLE IF EXISTS `errortask`;
 CREATE TABLE `errortask` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `url` varchar(255) CHARACTER SET latin1 NOT NULL,
+  `url` varchar(255) NOT NULL,
   `time` int(11) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `url` (`url`) USING BTREE,
   KEY `time` (`time`) USING BTREE
 ) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
-
--- ----------------------------
--- Table structure for newlinks
--- ----------------------------
-DROP TABLE IF EXISTS `newlinks`;
-CREATE TABLE `newlinks` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `url` varchar(255) NOT NULL,
-  `level` int(11) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8 PARTITION BY HASH(id DIV 500000);
 
 -- ----------------------------
 -- Table structure for notupdate
