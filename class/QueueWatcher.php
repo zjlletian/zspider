@@ -57,7 +57,7 @@ class QueueWatcher {
 			$pid = pcntl_fork();
 			if(!$pid) {
 				self::connect();
-				self::handleNewLinks($count*$GLOBALS['MAX_PARALLEL_QUEUE']*5);
+				self::handleNewLinks($count*$GLOBALS['MAX_PARALLEL_QUEUE']*10);
 			}
 		}
 
@@ -97,7 +97,7 @@ class QueueWatcher {
 	//处理新链接
 	private static function handleNewLinks($hash){
 		while(true) {
-			$result=mysqli_query(self::$mycon,"select * from newlinks limit {$hash},5");
+			$result=mysqli_query(self::$mycon,"select * from newlinks limit {$hash},10");
 			if($result->num_rows>0){
 				while($link=mysqli_fetch_assoc($result)){
 					self::addLinkToQueue($link);
