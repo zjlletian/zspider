@@ -14,6 +14,17 @@ CREATE TABLE `errortask` (
 ) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
+-- Table structure for newlinks
+-- ----------------------------
+DROP TABLE IF EXISTS `newlinks`;
+CREATE TABLE `newlinks` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `url` varchar(255) NOT NULL,
+  `level` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8 PARTITION BY HASH(id DIV 500000);
+
+-- ----------------------------
 -- Table structure for notupdate
 -- ----------------------------
 DROP TABLE IF EXISTS `notupdate`;
@@ -85,4 +96,4 @@ CREATE TABLE `taskqueue` (
   KEY `type_time` (`type`,`time`) USING BTREE,
   KEY `time` (`time`) USING BTREE,
   KEY `type` (`type`) USING HASH
-) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=0;

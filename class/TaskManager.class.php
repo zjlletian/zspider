@@ -82,9 +82,12 @@ class TaskManager {
 		if(!isset($urlinfo['error'])){
 			if($urlinfo['level']>0 && count($urlinfo['links'])>0){
 				$level=$urlinfo['level']-1;
+				$sql='insert into newlinks values';
 				foreach ($urlinfo['links'] as $url) {
-					self::addLinkToQueue($url,$level);
+					$url= mysqli_escape_string(self::$mycon,$url);
+					$sql.="(null,'{$url}',{$level}),";
 				}
+				mysqli_query(self::$mycon,rtrim($sql,",").";");
 			}
 			$addlinktime=round(microtime(true)-$now,3);
 			$count=count($urlinfo['links']);
@@ -145,31 +148,6 @@ class TaskManager {
 		return date("Y-m-d H:i:s",$updatetime);
 	}
 
-	//将新连接加入队列
-	private static function addLinkToQueue($url,$level){
-		$url=mysqli_escape_string(self::$mycon,$url);
-
-		//忽略存在于不更新列表中的链接
-		if(mysqli_query(self::$mycon,"select * from notupdate where url='{$url}' limit 1")->num_rows>0){
-			return ;
-		}
-		//忽略正在处理的链接
-		if(mysqli_query(self::$mycon,"select * from onprocess where url='{$url}' limit 1")->num_rows>0){
-			return ;
-		}
-		//忽略标记为错误的链接
-		if(mysqli_query(self::$mycon,"select * from errortask where url='{$url}' limit 1")->num_rows>0){
-			return ;
-		}
-		//若不存在队列中，则加入新任务。若存在level大于队列中的level，则更新队列中的level
-		if(!mysqli_query(self::$mycon,"insert into taskqueue values(null,'{$url}','{$level}',(SELECT unix_timestamp(now())),0)")){
-			$task = mysqli_fetch_assoc(mysqli_query(self::$mycon,"select * from taskqueue where url='{$url}' limit 1"));
-			if($task!=null && $task['level']<$level){
-				mysqli_query(self::$mycon,"update taskqueue set level={$level} where id={$task['id']} limit 1");
-			}
-		}
-	}
-	
 	//判断地址是否需要处理,用于redirect后的地址判断，返回处理等级，-1不需要
 	static function isHandled($url,$level) {
 		$url= mysqli_escape_string(self::$mycon,$url);

@@ -51,8 +51,20 @@ class QueueWatcher {
 			self::queueinfoCollector();
 		}
 
+		//启动新链接转储进程
+		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create NewLinks transporter...\n\n");
+		for($count=0;$count<$GLOBALS['MAX_PARALLEL_QUEUE'];$count++){
+			$pid = pcntl_fork();
+			if(!$pid) {
+				self::connect();
+				self::handleNewLinks($count*$GLOBALS['MAX_PARALLEL_QUEUE']*5);
+			}
+		}
+
 		//监视子进程退出
-		pcntl_wait($status);
+		while(true){
+			pcntl_wait($status);
+		}
 		Util::echoRed("[".date("Y-m-d H:i:s")."] QueueWatcher stoped..");
 	}
 
@@ -81,7 +93,24 @@ class QueueWatcher {
 			sleep(2);
 		}
 	}
-	
+
+	//处理新链接
+	private static function handleNewLinks($hash){
+		while(true) {
+			$result=mysqli_query(self::$mycon,"select * from newlinks limit {$hash},5");
+			if($result->num_rows>0){
+				while($link=mysqli_fetch_assoc($result)){
+					self::addLinkToQueue($link);
+					mysqli_query(self::$mycon,"delete from newlinks where id={$link['id']} limit 1");
+				}
+				$result->free();
+			}
+			else{
+				usleep(500000);//500毫秒
+			}
+		}
+	}
+
 	//添加连接到队列中
 	private static function addLinkToQueue($link){
 		$level=$link['level'];

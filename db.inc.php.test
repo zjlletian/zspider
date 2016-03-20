@@ -23,3 +23,6 @@ $GLOBALS['REPORTADDR']='http://spider.zhouvm.com/json/report';
 
 //爬虫最大并行任务数量
 $GLOBALS['MAX_PARALLEL']=60;
+
+//新链接转储最大并行任务量
+$GLOBALS['MAX_PARALLEL_QUEUE']=60;

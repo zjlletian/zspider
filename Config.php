@@ -35,6 +35,11 @@ if(!isset($GLOBALS['MAX_PARALLEL'])){
 	$GLOBALS['MAX_PARALLEL']=60;
 }
 
+//新链接转储最大并行任务量
+if(!isset($GLOBALS['MAX_PARALLEL'])){
+	$GLOBALS['MAX_PARALLEL_QUEUE']=60;
+}
+
 //最大网页大小(B)
 $GLOBALS['MAX_HTMLSISE']=1024*2048;
 
