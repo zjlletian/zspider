@@ -82,7 +82,7 @@ Util::putErrorLog("---------------------- All TaskHandler progress exit --------
 function reportSpider(){
 	while(true){
 		$sysload=Util::getSysLoad();
-		$sysload['running']=Util::killPid($GLOBALS['TASKTIME']+30);
+		$sysload['running']=Util::killPid($GLOBALS['TASKTIME']+120);
 		$data =[
 			'name' =>$GLOBALS['SPIDERNAME'],
 			'handler'=>$GLOBALS['MAX_PARALLEL'],
