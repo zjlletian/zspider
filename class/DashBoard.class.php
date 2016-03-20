@@ -21,10 +21,10 @@ class Dashboard{
     //爬虫状态报告（用于爬虫post）
     static function spiderReport($name,$ip,$handler,$sysload){
         if(mysqli_query(self::$mycon,"replace into spiders values(null,'{$name}','{$ip}',(SELECT unix_timestamp(now())),{$handler},'{$sysload}')")){
-            return  "save info suc";
+            return "save info suc";
         }
         else{
-            return  "save info failed";
+            return "save info failed";
         }
     }
 
