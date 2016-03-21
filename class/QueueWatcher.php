@@ -53,12 +53,15 @@ class QueueWatcher {
 
 		//启动新链接转储进程
 		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create NewLinks transporter...\n\n");
-		for($count=0;$count<$GLOBALS['MAX_PARALLEL_QUEUE'];$count++){
+
+		$count=0;
+		while($count<$GLOBALS['MAX_PARALLEL_QUEUE']){
 			$pid = pcntl_fork();
 			if(!$pid) {
 				self::connect();
 				self::handleNewLinks($count*$GLOBALS['MAX_PARALLEL_QUEUE']*10);
 			}
+			$count++;
 		}
 
 		//监视子进程退出
@@ -149,7 +152,6 @@ class QueueWatcher {
 	//队列信息收集，因为某些count(*)在大量数据下执行需要很长时间，所以采用单独进程统计数据
 	private static function queueinfoCollector(){
 		while(true){
-
 			//等待爬取的新网页数量
 			$new=mysqli_fetch_assoc(mysqli_query(self::$mycon,"select count(*) as count from taskqueue where type=0"))['count'];
 			mysqli_query(self::$mycon,"replace into queueinfo values('new','".$new."')");

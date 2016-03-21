@@ -15,11 +15,11 @@ $GLOBALS['MYSQL'] = array(
 	'passwd'=>'passwd'
 );
 
-//Spider标识
-$GLOBALS['SPIDERNAME']='spidername';
-
 //spider信息报告地址
 $GLOBALS['REPORTADDR']='http://spider.zhouvm.com/json/report';
+
+//Spider标识
+$GLOBALS['SPIDERNAME']='spidername';
 
 //爬虫最大并行任务数量
 $GLOBALS['MAX_PARALLEL']=60;

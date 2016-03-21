@@ -157,4 +157,10 @@ class Util{
 		];
 		return $sysload;
 	}
+
+	//获取Mysql系统负载
+	static function getMysqlSysload(){
+		exec("mysql -h {$GLOBALS['MYSQL']['host']} -P {$GLOBALS['MYSQL']['port']} -u{$GLOBALS['MYSQL']['user']} -p{$GLOBALS['MYSQL']['passwd']} -e 'status;' " ,$status);
+		return $status;
+	}
 }

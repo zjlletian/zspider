@@ -42,10 +42,12 @@ $hash=0;
 
 //批量创建爬虫进程
 $count=0;
-for(;$count<$GLOBALS['MAX_PARALLEL']; $count++){
+while($count<$GLOBALS['MAX_PARALLEL']){
 	TaskHandler::createProgress($hash);
 	$hash=($hash+mt_rand(10,20))%300;
+	$count++;
 }
+
 Util::echoGreen("[".date("Y-m-d H:i:s")."] Create TaskHandler done, running TaskHandler progress:".$count."\n\n");
 Util::putErrorLog("Create TaskHandler done, running TaskHandler progress:".$count."\r\n");
 

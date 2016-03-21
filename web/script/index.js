@@ -246,7 +246,7 @@ function loadDocCount(){
             },
             yAxis: {
                 type: 'value',
-                name: '处理速度(个/分钟)'
+                name: '处理速度(文档/分钟)'
             },
             series: [{
                 name: '新增',
@@ -310,7 +310,7 @@ function loadAvgTime(){
 	$.get("/json/avgtime?r="+Math.random(),function(data){
 		var option = {
 	        title: {
-	            text:'单文档处理周期 '+data.total+'s ( 平均链接数 '+parseInt(data.newlinks)+')',
+	            text:'单文档处理周期 '+data.total+'s (平均链接数 '+parseInt(data.newlinks)+')',
 	            subtext:'基于 '+getTimeStr(-120).substr(11,5)+' 至 '+getTimeStr(-60).substr(11,5)+' 任务日志分析',
 	            x:'center',
 	            top:15

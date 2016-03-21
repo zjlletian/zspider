@@ -1,6 +1,6 @@
 <?php
 require_once(dirname(dirname(__FILE__)).'/Config.php');
-var_dump(Util::getSysLoad());
+
 $now=microtime(true);
 if(count($argv)<2){
 	die("No url was given.\n");
