@@ -126,13 +126,13 @@ function timebarinc(barid) {
              bar.html(parseInt(cost)+"/"+parseInt(max));
          }
          else if(times<4 && (10-cost+max)>=0 ){
-             bar.html('等待爬虫响应: '+(10-cost+max)+'秒后将转交给其他爬虫处理');
+             bar.html('等待爬虫响应: '+parseInt(10-cost+max)+'秒后将转交给其他爬虫处理');
          }
          else if(times<4 && (10-cost+max)<0 ){
              bar.html('任务超时：等待其他爬虫处理');
          }
          else if(times>=4 && (10-cost+max)>=0){
-             bar.html('等待爬虫响应: '+(10-cost+max)+'秒后任务将删除');
+             bar.html('等待爬虫响应: '+parseInt(10-cost+max)+'秒后任务将删除');
          }
          else{
              bar.html('任务超时次数过多: 任务将删除');

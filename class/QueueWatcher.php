@@ -59,7 +59,7 @@ class QueueWatcher {
 			$pid = pcntl_fork();
 			if(!$pid) {
 				self::connect();
-				self::handleNewLinks($count*$GLOBALS['MAX_PARALLEL_QUEUE']*10);
+				self::handleNewLinks($count*5*10);
 			}
 			$count++;
 		}
@@ -104,27 +104,41 @@ class QueueWatcher {
 			if($result->num_rows>0){
 				while($link=mysqli_fetch_assoc($result)){
 					self::addLinkToQueue($link);
-					mysqli_query(self::$mycon,"delete from newlinks where id={$link['id']} limit 1");
 				}
 				$result->free();
 			}
 			else{
-				usleep(500000);//500毫秒
+				usleep(1000000);//1000毫秒
 			}
 		}
 	}
 
-	//添加连接到队列中
+	//添加连接到队列中(调用存储过程)
+	private  static function addLinkToQueue_Proc($link){
+		$url=mysqli_escape_string(self::$mycon,$link['url']);
+		if(isset($link['id'])){
+			mysqli_query(self::$mycon, "call AddLinkToQueue({$link['id']},'{$url}', {$link['level']});");
+		}
+		else{
+			mysqli_query(self::$mycon, "call AddLinkToQueue(0,'{$url}', {$link['level']});");
+		}
+	}
+
 	private static function addLinkToQueue($link){
+		//从新链接表删除
+		if(isset($link['id'])){
+			mysqli_query(self::$mycon,"delete from newlinks where id={$link['id']} limit 1");
+		}
+
 		$level=$link['level'];
 		$url=mysqli_escape_string(self::$mycon,$link['url']);
 
-		//忽略存在于不更新列表中的链接
-		if(mysqli_query(self::$mycon,"select * from notupdate where url='{$url}' limit 1")->num_rows>0){
-			return ;
-		}
 		//忽略正在处理的链接
 		if(mysqli_query(self::$mycon,"select * from onprocess where url='{$url}' limit 1")->num_rows>0){
+			return ;
+		}
+		//忽略存在于不更新列表中的链接
+		if(mysqli_query(self::$mycon,"select * from notupdate where url='{$url}' limit 1")->num_rows>0){
 			return ;
 		}
 		//忽略标记为错误的链接
