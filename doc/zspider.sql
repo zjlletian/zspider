@@ -22,7 +22,7 @@ CREATE TABLE `newlinks` (
   `url` varchar(255) NOT NULL,
   `level` int(11) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8 PARTITION BY HASH(id DIV 500000);
+) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Table structure for notupdate

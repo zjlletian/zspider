@@ -140,12 +140,12 @@ class Util{
 
 	//获取系统负载信息
 	static function getSysLoad(){
-		exec("top -n 1 |awk '/Cpu/ {print $2+$4}'",$cpustr);
-		exec("top -n 1 |awk '/Mem/ {print $4/1024\" \" $6/1024\" \"$8/1024}'",$memstr);
 		exec("cat /proc/cpuinfo| grep processor| wc -l",$cpucountstr);
+		exec("top -n 2 |awk '/Cpu/ {print $2+$4}'",$cpustr);
+		exec("top -n 1 |awk '/Mem/ {print $4/1024\" \" $6/1024\" \"$8/1024}'",$memstr);
 		exec("cat /proc/loadavg | awk '{print $1}'",$loadstr);
 		$cpucount=intval($cpucountstr[0]);
-		$cpuused=round(floatval($cpustr[0]),1);
+		$cpuused=round(floatval($cpustr[1]),1);
 		$cpuload=round(floatval($loadstr[0])/$cpucount,2);
 		$memory=explode(" ",$memstr[0]);
 		$sysload=[

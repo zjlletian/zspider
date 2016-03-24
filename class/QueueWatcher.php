@@ -51,7 +51,7 @@ class QueueWatcher {
 			$pid = pcntl_fork();
 			if(!$pid) {
 				self::connect();
-				self::handleNewLinks($count*10*10);
+				self::handleNewLinks($count*100*5);
 			}
 			$count++;
 			usleep(100000);
@@ -103,7 +103,7 @@ class QueueWatcher {
 	//处理新链接
 	private static function handleNewLinks($hash){
 		while(true) {
-			$result=mysqli_query(self::$mycon,"select * from newlinks limit {$hash},10");
+			$result=mysqli_query(self::$mycon,"select * from newlinks limit {$hash},100");
 			if($result->num_rows>0){
 				while($link=mysqli_fetch_assoc($result)){
 					self::addLinkToQueue($link);

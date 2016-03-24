@@ -53,10 +53,10 @@ function loadQueueInfo(){
             if(data.spiders[i].sysload.cpuload>5 || data.spiders[i].sysload.cpuused>90  || (data.spiders[i].sysload.memused/data.spiders[i].sysload.memtotal)>0.9){
                 color='red';
             }
-            else if(data.spiders[i].sysload.cpuload>3 || data.spiders[i].sysload.cpuused>70  || (data.spiders[i].sysload.memused/data.spiders[i].sysload.memtotal)>0.7){
+            else if(data.spiders[i].sysload.cpuload>3 || data.spiders[i].sysload.cpuused>75  || (data.spiders[i].sysload.memused/data.spiders[i].sysload.memtotal)>0.75){
                 color='orangered';
             }
-            else if(data.spiders[i].sysload.cpuload>1.5 || data.spiders[i].sysload.cpuused>50  || (data.spiders[i].sysload.memused/data.spiders[i].sysload.memtotal)>0.5){
+            else if(data.spiders[i].sysload.cpuload>1.5 || data.spiders[i].sysload.cpuused>60  || (data.spiders[i].sysload.memused/data.spiders[i].sysload.memtotal)>0.6){
                 color='orange';
             }
             else{
