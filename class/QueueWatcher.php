@@ -111,7 +111,7 @@ class QueueWatcher {
 				$result->free();
 			}
 			else{
-				usleep(1000000);//1000毫秒
+				sleep(1);
 			}
 		}
 	}
@@ -162,7 +162,7 @@ class QueueWatcher {
 		while (true) {
 			mysqli_query(self::$mycon,"delete from errortask where time<=(SELECT unix_timestamp(now()))");
 			mysqli_query(self::$mycon,"delete newlinks from newlinks,taskqueue WHERE newlinks.url = taskqueue.url AND newlinks.`level`<=taskqueue.`level`");
-			sleep(3600);
+			sleep(1200);
 		}
 	}
 
