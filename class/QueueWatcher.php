@@ -28,16 +28,8 @@ class QueueWatcher {
 			self::addLinkToQueue($link);
 		}
 
-		//启动监视ack进程
-		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create Ack Watcher...\n");
-		$pid = pcntl_fork();
-		if(!$pid) {
-			self::connect();
-			self::handleAck();
-		}
-
 		//启动删除过期错误进程
-		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create ErrorLinks Watcher...\n");
+		Util::echoGreen("Create ErrorLinks Watcher...\n");
 		$pid = pcntl_fork();
 		if(!$pid) {
 			self::connect();
@@ -45,24 +37,35 @@ class QueueWatcher {
 		}
 
 		//收集队列信息
-		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create Queueinfo collector...\n");
+		Util::echoGreen("Create Queueinfo collector...\n");
 		$pid = pcntl_fork();
 		if(!$pid) {
+			self::connect();
 			self::queueinfoCollector();
 		}
 
 		//启动新链接转储进程
-		Util::echoGreen("[".date("Y-m-d H:i:s")."] Create NewLinks transporter...\n\n");
-
+		Util::echoGreen("Create NewLinks transporter (count {$GLOBALS['MAX_PARALLEL_QUEUE']}) ...\n");
 		$count=0;
 		while($count<$GLOBALS['MAX_PARALLEL_QUEUE']){
 			$pid = pcntl_fork();
 			if(!$pid) {
 				self::connect();
-				self::handleNewLinks($count*5*10);
+				self::handleNewLinks($count*10*10);
 			}
 			$count++;
+			usleep(100000);
 		}
+
+		//启动监视ack进程
+		Util::echoGreen("Create Ack Watcher...\n");
+		$pid = pcntl_fork();
+		if(!$pid) {
+			self::connect();
+			self::handleAck();
+		}
+
+		Util::echoYellow("[".date("Y-m-d H:i:s")."] Init Zspider QueueWatcher Done !\n\n");
 
 		//监视子进程退出
 		while(true){
@@ -135,31 +138,31 @@ class QueueWatcher {
 
 		//忽略正在处理的链接
 		if(mysqli_query(self::$mycon,"select * from onprocess where url='{$url}' limit 1")->num_rows>0){
-			return ;
+			return false;
 		}
 		//忽略存在于不更新列表中的链接
 		if(mysqli_query(self::$mycon,"select * from notupdate where url='{$url}' limit 1")->num_rows>0){
-			return ;
+			return false;
 		}
 		//忽略标记为错误的链接
 		if(mysqli_query(self::$mycon,"select * from errortask where url='{$url}' limit 1")->num_rows>0){
-			return ;
+			return false;
 		}
 		//若不存在队列中，则加入新任务。若存在level大于队列中的level，则更新队列中的level
 		if(!mysqli_query(self::$mycon,"insert into taskqueue values(null,'{$url}','{$level}',(SELECT unix_timestamp(now())),0)")){
 			$task = mysqli_fetch_assoc(mysqli_query(self::$mycon,"select * from taskqueue where url='{$url}' limit 1"));
 			if($task!=null && $task['level']<$level){
-				mysqli_query(self::$mycon,"update taskqueue set level={$level} where id={$task['id']} limit 1");
+				return mysqli_query(self::$mycon,"update taskqueue set level={$level} where id={$task['id']} limit 1");
 			}
 		}
 	}
 
-	//清除到达清理时间的错误连接，每10天执行一次
+	//清除到达清理时间的错误连接
 	private static function cleanErrorLinks(){
 		while (true) {
-			self::connect(false);
 			mysqli_query(self::$mycon,"delete from errortask where time<=(SELECT unix_timestamp(now()))");
-			time_sleep_until(time()+3600*24*10);
+			mysqli_query(self::$mycon,"delete newlinks from newlinks,taskqueue WHERE newlinks.url = taskqueue.url AND newlinks.`level`<=taskqueue.`level`");
+			sleep(3600);
 		}
 	}
 

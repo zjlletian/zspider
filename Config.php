@@ -32,12 +32,12 @@ date_default_timezone_set('Asia/Shanghai');
 
 //爬虫最大并行任务数量
 if(!isset($GLOBALS['MAX_PARALLEL'])){
-	$GLOBALS['MAX_PARALLEL']=60;
+	$GLOBALS['MAX_PARALLEL']=100;
 }
 
 //新链接转储最大并行任务量
 if(!isset($GLOBALS['MAX_PARALLEL'])){
-	$GLOBALS['MAX_PARALLEL_QUEUE']=60;
+	$GLOBALS['MAX_PARALLEL_QUEUE']=100;
 }
 
 //最大网页大小(B)
