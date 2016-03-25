@@ -54,7 +54,6 @@ class QueueWatcher {
 				self::handleNewLinks($count*100*5);
 			}
 			$count++;
-			usleep(100000);
 		}
 
 		//启动监视ack进程
