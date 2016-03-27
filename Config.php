@@ -31,12 +31,12 @@ date_default_timezone_set('Asia/Shanghai');
 //--------------------------------- 爬虫处理规则配置 --------------------------------------
 
 //爬虫最大并行任务数量
-if(!isset($GLOBALS['MAX_PARALLEL'])){
+if(!isset($GLOBALS['MAX_PARALLEL'])) {
 	$GLOBALS['MAX_PARALLEL']=90;
 }
 
 //新链接转储最大并行任务量
-if(!isset($GLOBALS['MAX_PARALLEL'])){
+if(!isset($GLOBALS['MAX_PARALLEL'])) {
 	$GLOBALS['MAX_PARALLEL_QUEUE']=30;
 }
 
@@ -85,27 +85,27 @@ $GLOBALS['UPDATE_TIME'] = array(
 	'0'=> 3600*24*30
 );
 
-//自定义站点等级与更新周期
-$GLOBALS['SITE_UPDATE'] = array(
-	'http://news.ifeng.com/'=>array('level'=>1,'time'=>3600)
-);
-
-//不进行更新的url (包涵以下字段)
-$GLOBALS['NOTUPDATE_HAS'] = array(
-	'ifeng.com/a/',
-	'ifeng.com/news/',
-	'ifeng.com/mil/'
-);
+//尝试从配置文件加载
+if(file_exists(APPROOT.'/rules.php')){
+	require_once(APPROOT.'/rules.inc.php');
+}
 
 //默认起点站点
-$GLOBALS['DEFAULT_SITE'] = array(
-	array('url'=>'https://www.baidu.com/','level'=>3),
-	array('url'=>'http://www.sina.com.cn/','level'=>3),
-	array('url'=>'http://www.qq.com/','level'=>3),
-	array('url'=>'http://www.ifeng.com/','level'=>3),
-	array('url'=>'http://www.163.com/','level'=>2),
-	array('url'=>'http://www.csdn.net/','level'=>2),
-	array('url'=>'http://www.guokr.com/','level'=>2),
-	array('url'=>'http://www.zol.com.cn/','level'=>2),
-	array('url'=>'http://www.mi.com/','level'=>2)
-);
+if(!isset($GLOBALS['DEFAULT_SITE'])) {
+	$GLOBALS['DEFAULT_SITE'] = array(
+		array('url' => 'https://www.baidu.com/', 'level' => 2),
+		array('url' => 'http://www.sina.com.cn/', 'level' => 2),
+		array('url' => 'http://www.qq.com/', 'level' => 2),
+		array('url' => 'http://www.163.com/', 'level' => 2),
+	);
+}
+
+//自定义站点等级与更新周期
+if(!isset($GLOBALS['SITE_UPDATE'])){
+	$GLOBALS['SITE_UPDATE'] = array();
+}
+
+//不进行更新的url (包涵以下字段)
+if(!isset($GLOBALS['NOTUPDATE_HAS'])){
+	$GLOBALS['NOTUPDATE_HAS'] = array();
+}
