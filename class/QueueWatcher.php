@@ -115,17 +115,6 @@ class QueueWatcher {
 		}
 	}
 
-	//添加连接到队列中(调用存储过程)
-	private  static function addLinkToQueue_Proc($link){
-		$url=mysqli_escape_string(self::$mycon,$link['url']);
-		if(isset($link['id'])){
-			mysqli_query(self::$mycon, "call AddLinkToQueue({$link['id']},'{$url}', {$link['level']});");
-		}
-		else{
-			mysqli_query(self::$mycon, "call AddLinkToQueue(0,'{$url}', {$link['level']});");
-		}
-	}
-
 	private static function addLinkToQueue($link){
 		//从新链接表删除
 		if(isset($link['id'])){
@@ -150,7 +139,7 @@ class QueueWatcher {
 		//若不存在队列中，则加入新任务。若存在level大于队列中的level，则更新队列中的level
 		if(!mysqli_query(self::$mycon,"insert into taskqueue values(null,'{$url}','{$level}',(SELECT unix_timestamp(now())),0)")){
 			$task = mysqli_fetch_assoc(mysqli_query(self::$mycon,"select * from taskqueue where url='{$url}' limit 1"));
-			if($task!=null && $task['level']<$level){
+			if($task!=null && $task['level']<$level && !isset($GLOBALS['SITE_UPDATE'][$task['url']])){
 				return mysqli_query(self::$mycon,"update taskqueue set level={$level} where id={$task['id']} limit 1");
 			}
 		}
