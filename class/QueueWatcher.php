@@ -139,7 +139,7 @@ class QueueWatcher {
 		//若不存在队列中，则加入新任务。若存在level大于队列中的level，则更新队列中的level
 		if(!mysqli_query(self::$mycon,"insert into taskqueue values(null,'{$url}','{$level}',(SELECT unix_timestamp(now())),0)")){
 			$task = mysqli_fetch_assoc(mysqli_query(self::$mycon,"select * from taskqueue where url='{$url}' limit 1"));
-			if($task!=null && $task['level']<$level && !isset($GLOBALS['SITE_UPDATE'][$task['url']])){
+			if($task!=null && $task['level']<$level && !(isset($GLOBALS['SITE_UPDATE'][$task['url']]) && $task['type']==1) ){
 				return mysqli_query(self::$mycon,"update taskqueue set level={$level} where id={$task['id']} limit 1");
 			}
 		}
