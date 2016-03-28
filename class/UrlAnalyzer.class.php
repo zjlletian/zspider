@@ -116,13 +116,6 @@ class UrlAnalyzer{
 			//判断是否访问成功
 			if(intval($response['code'])/100==2) {
 
-				//根据contentType判断文档类型是否为text/html
-				$contentType = strtr(strtoupper($responseheader['content_type']), array(' '=>'','\t'=>'','@'=>''));
-				if(strpos($contentType,'TEXT/HTML')===false){
-					$response['code'] = 800;
-					throw new Exception("doctype is not html.");
-				}
-
 				//判断网页是否为空
 				if(strlen($htmltext)==0){
 					$response['code'] = 600;
@@ -132,16 +125,20 @@ class UrlAnalyzer{
 				//判断是网页是否过大，避免内存溢出以及存入es过慢
 				if(strlen($htmltext)>$GLOBALS['MAX_HTMLSISE']){
 					$response['code'] = 600;
-		    		throw new Exception("html is too long. (doc size=".strlen($htmltext).", max size=".$GLOBALS['MAX_HTMLSISE'].")");
+					throw new Exception("html is too long. (doc size=".strlen($htmltext).", max size=".$GLOBALS['MAX_HTMLSISE'].")");
 				}
 
-				//如果能够从HtmlHead中的meta标签获取charset则直接交给pq处理，否则使用header或函数检测charset并转换为utf-8
-				$charset ='';
-				$metachs=self::contentTypeFromMeta($htmltext)[1];
-				if($metachs!=null){
-					$charset=strtoupper($metachs);
+				//根据contentType判断文档类型是否为text/html
+				$contentType = strtr(strtoupper($responseheader['content_type']), array(' '=>'','\t'=>'','@'=>''));
+				if(strpos($contentType,'TEXT/HTML')===false){
+					$response['code'] = 800;
+					throw new Exception("doctype is not html.");
 				}
-				else{
+
+				//如果能够从HtmlHead中的meta标签获取charset，若未检出则使用header或函数检测charset并转换为utf-8
+				$autocharset=self::contentTypeFromMeta($htmltext)[1];
+				$charset = $autocharset==null? '' : strtoupper($autocharset);
+				if($charset == ''){
 					//使用HttpHeader中的ContentType获取chaeset
 					foreach (explode(";",$contentType) as $ct) {
 					$ctkv=explode("=",$ct);
@@ -160,9 +157,9 @@ class UrlAnalyzer{
 						$response['code'] = 600;
 						throw new Exception("unknown charset.");
 					}
-					elseif($charset != "UTF-8"){
-						$htmltext = mb_convert_encoding($htmltext,'UTF-8',$charset);
-					}
+				}
+				if($charset != "UTF-8"){
+					$htmltext = mb_convert_encoding($htmltext,'UTF-8',$charset);
 				}
 				$response['charset']=$charset;
 
@@ -247,13 +244,14 @@ class UrlAnalyzer{
 		}
 	}
 
-	//从meta中获取contentType数组：[ doctype , charset ]（从phpquery中提取）
-	static function contentTypeFromMeta($markup) {
+	//从meta中获取contentType数组：[ doctype , charset ]（从phpquery中提取并修改）
+	static function contentTypeFromMeta(&$markup) {
 		$matches = array();
 		preg_match('@<meta[^>]+http-equiv\\s*=\\s*(["|\'])Content-Type\\1([^>]+?)>@i',$markup, $matches);
 		if (!isset($matches[0])){
 			return array(null, null);
 		}
+		$markup = str_replace($matches[0],'', $markup);
 		preg_match('@content\\s*=\\s*(["|\'])(.+?)\\1@', $matches[0], $matches);
 		if (!isset($matches[0])){
 			return array(null, null);
