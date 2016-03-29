@@ -6,6 +6,7 @@
 	<link rel="stylesheet" href="//cdn.bootcss.com/bootstrap/3.3.5/css/bootstrap.min.css">
 	<link rel="stylesheet" href="//cdn.bootcss.com/bootstrap/3.3.5/css/bootstrap-theme.min.css">
 	<link rel="stylesheet" href="//cdn.bootcss.com/bootstrap/3.3.5/css/bootstrap-theme.min.css">
+	<link rel="stylesheet" href="//netdna.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
 	<link rel="stylesheet" href="/css/docs.min.css">
 	<link rel="stylesheet" href="/css/style.css">
 </head>
@@ -13,31 +14,37 @@
 <body>
 <div class="container-fluid" style="width:1250px">
 	<div class="row">
+
+		<!-- 左边栏 -->
 		<div class="col-md-4" style="width:420px; float:left;">
 			<div class="row">
 				<div class="col-md-12">
 					<h2>&nbsp;ZSpider DashBoard</h2>
 				</div>
 			</div>
+
 			<div class="row bs-callout bs-callout-info" style="padding-bottom: 0; ">
 				<div class="col-md-12">
 					<h4  style="display:inline;">文档数量信息</h4>&nbsp;&nbsp;
-					<button type="button" class="btn btn-info btn-xs hbtn" onclick="showdoc()">文档日志监控</button>
+					<button type="button" class="btn btn-info btn-xs hbtn" onclick="showdoc()">
+						<span class="fa fa-area-chart"></span>&nbsp;&nbsp;日志监控
+					</button>
 					<br><br>
 					<table class="table">
-						<tr><td style="width:200px;">已存文档总量</td><td id="totaldoc">loading</td></tr>
-						<tr><td>今日新增总量</td><td id="todaynew">loading</td></tr>
-						<tr><td>今日更新总量</td><td id="todayupdate">loading</td></tr>
+						<tr><td style="width:200px;">已存文档总量</td><td id="totaldoc"><span class="fa fa-spinner fa-spin"></span></td></tr>
+						<tr><td>今日新增总量</td><td id="todaynew"><span class="fa fa-spinner fa-spin"></span></td></tr>
+						<tr><td>今日更新总量</td><td id="todayupdate"><span class="fa fa-spinner fa-spin"></span></td></tr>
 					</table>
 					<div id="tasklog"></div>
 				</div>
 			</div>
+
 			<div class="row bs-callout bs-callout-warning" style="padding-bottom: 0; ">
 				<div class="col-md-12">
 					<h4  style="display:inline;">队列任务信息</h4>&nbsp;&nbsp;
 					<button type="button" class="btn btn-warning btn-xs hbtn" onclick="showtask()">
-						实时任务进度&nbsp;&nbsp;
-						<span class="badge" id='onprosess' style="margin-top: -2px;">loading</span>
+						<span class="fa fa-list-ul"></span>&nbsp;&nbsp;实时进度
+						&nbsp;&nbsp;<span class="badge" id='onprosess' style="margin-top: -2px;">loading</span>
 					</button>
 					<br><br>
 					<table class="table" id="queueinfo">
@@ -46,18 +53,21 @@
 					</table>
 				</div>
 			</div>
+
 			<div class="row bs-callout bs-callout-danger" style="padding-bottom: 0; ">
 				<div class="col-md-12">
 					<h4  style="display:inline;">爬虫集群列表</h4>&nbsp;&nbsp;
 					<button class="btn btn-danger btn-xs hbtn" type="button" onclick="showspiders()">
-						节点负载信息&nbsp;&nbsp;
-						<span class="badge" id='spidercount' style="margin-top: -2px;">loading</span>
+						<span class="fa fa-server"></span>&nbsp;&nbsp;节点负载
+						&nbsp;&nbsp;<span class="badge" id='spidercount' style="margin-top: -2px;">loading</span>
 					</button>
 					<br><br>
 					<table class="table" id="spiderlist"></table>
 				</div>
 			</div>
 		</div>
+
+		<!-- 右边栏 -->
 		<div class="col-md-8" style="width:830px; float:left;">
 			<div class="row" style="display:none;" id="docboard">
 				<div class="col-md-12">
@@ -71,18 +81,19 @@
 					</div>
 				</div>
 			</div>
+
 			<div class="row"  style="display:none;" id="taskboard">
-				<h3 id="onprocess">实时任务进度&nbsp;&nbsp;( loading )</h3>
+				<h3 id="onprocess">&nbsp;&nbsp;实时任务进度&nbsp;&nbsp;( loading )</h3>
 				<div class="col-md-12" id="tasks" style="width:800px;"></div>
 			</div>
+
 			<div class="row"  style="display:none;" id="spiderboard">
 				<h3>爬虫节点负载信息</h3>
-				<div class="col-md-12" id="spiders" style="width:800px;">
-
-				</div>
+				<div class="col-md-12" id="spiders" style="width:800px;"></div>
 			</div>
 		</div>
 	</div>
+
 </div>
 </body>
 <script src="//cdn.bootcss.com/jquery/1.11.3/jquery.min.js"></script>

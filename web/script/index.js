@@ -182,7 +182,7 @@ function loadTaskList(){
             }
         }
         tasklist=newtasklist;
-        $('#onprocess').html('实时任务进度&nbsp;&nbsp;( 执行:'+(tasks.length-wait-error)+'&nbsp;&nbsp;等待:'+wait+'&nbsp;&nbsp;超时:'+error+' )');
+        $('#onprocess').html('&nbsp;&nbsp;实时任务进度&nbsp;&nbsp;( 执行:'+(tasks.length-wait-error)+'&nbsp;&nbsp;等待:'+wait+'&nbsp;&nbsp;超时:'+error+' )');
         if(showtaskb){
         	setTimeout("loadTaskList()",1000);
     	}
