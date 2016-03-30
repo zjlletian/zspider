@@ -359,7 +359,7 @@ function loadResultCount(){
         var option = {
             title: {
                 text:'24小时内处理任务总数 '+data.total,
-                subtext:'基于 '+getTimeStr(-3600*24).substr(11,5)+' 至 '+getTimeStr(0).substr(11,5)+' 任务日志分析',
+                subtext:'基于 '+timefrom.substr(0,16)+' 至 '+timeto.substr(0,16)+' 任务日志分析',
                 x:'center',
                 top:15
             },
