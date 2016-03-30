@@ -111,7 +111,7 @@ class Dashboard{
         return EsConnector::search('zspiderlog-*',$type,$query);
     }
 
-    //获取日志统计
+    //获取任务平均时间统计
     static function getAvgTime($from, $to){
         $query=[
             "query"=> [

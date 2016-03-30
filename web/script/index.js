@@ -6,6 +6,7 @@ $(function(){
     showdoc();
 	loadDocCount();
 	loadAvgTime();
+    loadResultCount();
 });
 
 var showtaskb=false;
@@ -350,4 +351,44 @@ function loadAvgTime(){
 		avgTime.setOption(option);
         setTimeout("loadAvgTime()",60000);
 	});
+}
+
+var resultCount = echarts.init(document.getElementById('resultcount'));
+function loadResultCount(){
+    $.get("/json/resultcount?r="+Math.random(),function(data){
+        var option = {
+            title: {
+                text:'24小时内处理任务总数 '+data.total,
+                subtext:'基于 '+getTimeStr(-3600*24).substr(11,5)+' 至 '+getTimeStr(0).substr(11,5)+' 任务日志分析',
+                x:'center',
+                top:15
+            },
+            tooltip : {
+                trigger: 'item',
+                formatter: "{b} : {c} ({d}%)"
+            },
+            series : [{
+                type:'pie',
+                radius : [25,95],
+                selectedMode: 'single',
+                center : ['50%',200],
+                roseType : 'area',
+                data:[{
+                    value:data.suc.new,
+                    name:'有效新页面'
+                },{
+                    value:data.err.new,
+                    name:'无效新页面'
+                },{
+                    value:data.suc.update,
+                    name:'有效更新'
+                },{
+                    value:data.err.update,
+                    name:'无效更新'
+                }].sort(function(a,b){return a.value-b.value})
+            }]
+        };
+        resultCount.setOption(option);
+        setTimeout("loadResultCount()",60000);
+    });
 }
