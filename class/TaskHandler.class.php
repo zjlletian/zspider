@@ -54,7 +54,7 @@ class TaskHandler {
 	private static function handleTask($task,$now){
 		$gettasktime=round(microtime(true)-$now,3);
 		//解析URL信息
-		$urlinfo=UrlAnalyzer::getInfo($task['url'],$task['level']);
+		$urlinfo=UrlAnalyzer::getUrlInfo($task['url'],$task['level']);
 
 		//如果返回状态为0，则检查网络
 		if($urlinfo['code']==0){
@@ -133,7 +133,7 @@ class TaskHandler {
 
 			if(!isset($urlinfo['error']) && $GLOBALS['DEBUG']){
 				$str= "Size:".round(strlen($urlinfo['text'])/1024,2)."KB Links:".count($urlinfo['links'])." Url: ".$task['url']."\n";
-				$str.="Process: gettask:".$gettasktime."s download:".$urlinfo['timeinfo']['download']."s extarct:".$urlinfo['timeinfo']['extarct']."s findhref:".$urlinfo['timeinfo']['findlinks']."s saveinfo:".$savetime."s\n";
+				$str.="Process: gettask:".$gettasktime."s download:".$urlinfo['timeinfo']['download']."s extract:".$urlinfo['timeinfo']['extract']."s findlinks:".$urlinfo['timeinfo']['findlinks']."s saveinfo:".$savetime."s\n";
 				$str.="Submit: ".$substr."\n";
 				$sum=$proctime+$submittime+$logtime;
 				echo $str."Process:".$proctime."s(".round($proctime/$sum*100,1)."%) Submit:".$submittime."s(".round($submittime/$sum*100,1)."%) Log:".$logtime."s(".round($logtime/$sum*100,1)."%)\n\n";

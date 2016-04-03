@@ -36,17 +36,13 @@ class Storager{
 	                        'type' => 'string',
 							'analyzer' =>'ik'
 	                    ],
-	                    'view' => [
-	                        'type' => 'long'
-	                    ],
-	                    'charset' => [
-	                        'type' => 'string',
-	                        'index' => 'not_analyzed'
-	                    ],
 	                    'text' => [
 	                        'type' => 'string',
 							'analyzer' =>'ik'
 	                    ],
+						'view' => [
+							'type' => 'long'
+						],
 	                    'md5' => [
 	                        'type' => 'string',
 	                        'index' => 'not_analyzed'
@@ -110,7 +106,7 @@ class Storager{
 								'download'=>[
 									'type' => 'float'
 								],
-								'extarct'=>[
+								'extract'=>[
 									'type' => 'float'
 								],
 								'findlinks'=>[
@@ -140,15 +136,14 @@ class Storager{
 
 	//保存urlinfo到ES
 	static function upsertUrlInfo($urlinfo){
-		$urlinfo['time'] = date("Y-m-d H:i:s",TaskManager::getServerTime());
-		unset($urlinfo['timeinfo']);
-		unset($urlinfo['code']);
-		unset($urlinfo['links']);
-		unset($urlinfo['level']);
-		$urlinfo['md5']=md5($urlinfo['text']);
-		$upsert = $urlinfo;
+		$urlinfos['time'] = date("Y-m-d H:i:s",TaskManager::getServerTime());
+		$urlinfos['url']=$urlinfo['url'];
+		$urlinfos['title']=$urlinfo['title'];
+		$urlinfos['text']=$urlinfo['text'];
+		$urlinfos['md5']=md5($urlinfo['text']);
+		$upsert = $urlinfos;
 		$upsert['view'] = 0;
-		return EsConnector::updateDocByDoc('zspider','html',md5($urlinfo['url']),$urlinfo,$upsert);
+		return EsConnector::updateDocByDoc('zspider','html',md5($urlinfos['url']),$urlinfos,$upsert);
 	}
 
 	//记录日志

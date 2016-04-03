@@ -143,9 +143,9 @@ class Dashboard{
                         "field"=> "timeinfo.download"
                     ]
                 ],
-                "avgextarct"=>[
+                "avgextract"=>[
                     "avg"=>[
-                        "field"=> "timeinfo.extarct"
+                        "field"=> "timeinfo.extract"
                     ]
                 ],
                 "avgfindlinks"=>[

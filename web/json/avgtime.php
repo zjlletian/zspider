@@ -11,7 +11,7 @@ $logcount=Dashboard::getAvgTime($from,$to)["aggregations"];
 $result["total"]=$logcount["avgtotal"]["value"]==null? 0 : round($logcount["avgtotal"]["value"],3);
 $result["gettask"]=$logcount["avgtotal"]["value"]==null? 0 : round($logcount["avggettask"]["value"],3);
 $result["download"]=$logcount["avgtotal"]["value"]==null? 0 : round($logcount["avgdownload"]["value"],3);
-$result["extarct"]=$logcount["avgtotal"]["value"]==null? 0 : round($logcount["avgextarct"]["value"],3);
+$result["extract"]=$logcount["avgtotal"]["value"]==null? 0 : round($logcount["avgextract"]["value"],3);
 $result["findlinks"]=$logcount["avgtotal"]["value"]==null? 0 : round($logcount["avgfindlinks"]["value"],3);
 $result["saveinfo"]=$logcount["avgtotal"]["value"]==null? 0 : round($logcount["avgsaveinfo"]["value"],3);
 $result["submit"]=$logcount["avgtotal"]["value"]==null? 0 : round($logcount["avgsubmit"]["value"],3);

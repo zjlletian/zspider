@@ -339,7 +339,7 @@ function loadAvgTime(){
 	            	value:data.download,
 	            	name:'下载文档'
 	            },{
-	            	value:data.extarct,
+	            	value:data.extract,
 	            	name:'提取正文'
 	            },{
 	            	value:data.findlinks,

@@ -4,103 +4,107 @@ require_once('phpQuery/phpQuery.php');
 
 class UrlAnalyzer{
 
-	//对url尝试3次获取信息
-	static function getInfo($url,$level){
-		$response=null;
-		for($count=1; $count<=3; $count++){
-			$response=self::getInfoOnce($url,$level);
-			if(!isset($response['error']) || $response['code']>=600){
-				break;
-			}
+	//获取Url信息
+	static function getUrlInfo($url, $level, $referer=null, $istest=false){
+		//下载url
+		$now=microtime(true);
+		$response=self::downloadUrl($url,$level,$referer, $istest);
+		if(isset($response['error'])){
+			return $response;
 		}
-		return $response;
+		$downloadtime=round(microtime(true)-$now,3);
+
+		//提取url内容信息
+		$urlinfo=self::htmlExtract($response['body'], $response['level'], $response['url'],$response['charset']);
+		if(!isset($urlinfo['error'])){
+			$urlinfo['code']=$response['code'];
+			$urlinfo['timeinfo']['download']=$downloadtime;
+		}
+		return $urlinfo;
 	}
 
-	//获取url的信息：url:实际访问的地址，code:状态码，charset:原始字符编码，text:纯文本内容，html:网页快照内容，level:判定后的level，error:错误信息
-	static function getInfoOnce($url,$level,$referer=null,$istest=false){
-		$now=microtime(true); 
-		//设置curl
+	//下载Url内容 url:实际访问的地址，code:状态码，type:正文类型，body:正文内容，charset:contenttype中的charset信息，level:判定后的level，error:错误信息
+	static function downloadUrl($url, $level, $referer=null, $istest=false) {
 		$ch = curl_init();
-		//curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-	    //curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
+		//设置curl参数
 		curl_setopt($ch, CURLOPT_URL, $url);
-	 	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, 5000);//设置连接超时时间
-	 	curl_setopt($ch, CURLOPT_TIMEOUT_MS, 5000);//设置超时时间
-	    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);//1将结果返回，0直接stdout
-	    curl_setopt($ch, CURLOPT_ENCODING, "gzip");//支持gzip
+		//设置连接超时时间
+		curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, 5000);
+		//设置超时时间
+		curl_setopt($ch, CURLOPT_TIMEOUT_MS, 5000);
+		//1将结果返回，0直接stdout
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+		//支持gzip
+		curl_setopt($ch, CURLOPT_ENCODING, "gzip");
+		//自动重定向：curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1); curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
 
-	    //处理request header,模拟google浏览器
+		//处理request header,模拟google浏览器
 		$header = array();
-		$header[] = "Accept: text/html;q=0.8"; 
+		$header[] = "Accept: text/html;q=0.8";
 		$header[] = "Accept-Encoding: gzip";
-		$header[] = "Accept-Language: zh,zh-CN;q=0.8"; 
-		$header[] = "Cache-Control: max-age=0"; 
-		$header[] = "Connection: keep-alive"; 
+		$header[] = "Accept-Language: zh,zh-CN;q=0.8";
+		$header[] = "Cache-Control: max-age=0";
+		$header[] = "Connection: keep-alive";
 		$header[] = "Keep-Alive: 300";
-		$header[] = "Accept-Charset: utf-8,ISO-8859-1;q=0.7,*;q=0.7"; 
+		$header[] = "Accept-Charset: utf-8,ISO-8859-1;q=0.7,*;q=0.7";
 		$header[] = "User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.109 Safari/537.36";
-	    if($referer){
-	    	$header[] = 'Referer: '.$referer;
-	    }
+		if($referer){
+			$header[] = 'Referer: '.$referer;
+		}
 		curl_setopt($ch, CURLOPT_HTTPHEADER,$header);
 		unset($header);
 
 		$response = array('code'=>0);
-		$htmltext='';
-		try{
+		$responseheader=array();
+		try {
 			//执行请求，对重定向地址循环执行，最大重定向次数5
 			for($loops=0; $loops<5; $loops++) {
-				$htmltext = curl_exec($ch);
+				$response['body'] = curl_exec($ch);
 				$responseheader = curl_getinfo($ch);
 				$response['url'] = $responseheader['url'];
 				$response['code'] = $responseheader['http_code'];
 
 				//判断地址是否被重定向，没有重定向则退出循环.301重定向在curl中的code是200，要用$response['url']!=$url判断
-				if(intval($response['code']/100)==3 || $response['url']!=$url){
-					if(empty($responseheader['redirect_url'])){
-						$url=$response['url'];
-						$redirectcode=301;
-					}
-					else{
-						$url=$responseheader['redirect_url'];
-						$redirectcode=302;
-					}
-					if($istest){
-						Util::echoYellow("Redirect[".$redirectcode."]: ".$url."\n");
-					}
-
-					//检查重定向地址是否有效
-					if(!self::checkHref($url)){
-						$response['code'] = 700;
-						throw new Exception("redirect url is marked to not trace.");
-					}
-
-					//判断地址是否需要处理
-					if(!$istest){
-						$level=TaskManager::isHandled($url,$level);
-					}
-					if($level==-1){
+				if(intval($response['code']/100)!=3 && $response['url']==$url){
+					break;
+				}
+				if(empty($responseheader['redirect_url'])){
+					$url=$response['url'];
+					$redirectcode=301;
+				}
+				else{
+					$url=$responseheader['redirect_url'];
+					$redirectcode=302;
+				}
+				if($istest){
+					Util::echoYellow("Redirect[".$redirectcode."]: ".$url."\n");
+				}
+				//检查重定向地址是否有效
+				if(!self::checkHref($url)){
+					$response['code'] = 700;
+					throw new Exception("redirect url is marked to not trace.");
+				}
+				//判断地址是否需要处理
+				if(!$istest){
+					$level=TaskManager::isHandled($url,$level);
+					if($level==-1) {
 						$response['code'] = 701;
 						throw new Exception("redirect url has been or is being handled.");
 					}
-					if($level==-2){
+					if($level==-2) {
 						$response['code'] = 702;
 						throw new Exception("redirect url has been marked to be not update.");
 					}
-					if($level==-3){
+					if($level==-3) {
 						$response['code'] = 703;
 						throw new Exception("redirect url has been marked to be error url.");
 					}
-
-					//如果是302需要以重定向地址重新获取，301不需要
-					if($redirectcode==301) {
-						break;
-					}
-					curl_setopt($ch, CURLOPT_URL, $url);
 				}
-				else {
+				//如果是302需要以重定向地址重新获取，301不需要
+				if($redirectcode==301) {
 					break;
 				}
+				curl_setopt($ch, CURLOPT_URL, $url);
 			}
 
 			//判断是否重定向超过次数限制
@@ -109,123 +113,31 @@ class UrlAnalyzer{
 				throw new Exception("too mach redirect.\n");
 			}
 
-			//下载时间
-			$response['timeinfo']['download']=round(microtime(true)-$now,3); 
-			$now=microtime(true);
-
 			//判断是否访问成功
-			if(intval($response['code'])/100==2) {
-
-				//判断网页是否为空
-				if(strlen($htmltext)==0){
-					$response['code'] = 600;
-					throw new Exception("empty html");
-				}
-
-				//判断是网页是否过大，避免内存溢出以及存入es过慢
-				if(strlen($htmltext)>$GLOBALS['MAX_HTMLSISE']){
-					$response['code'] = 600;
-					throw new Exception("html is too long. (doc size=".strlen($htmltext).", max size=".$GLOBALS['MAX_HTMLSISE'].")");
-				}
-
-				//根据contentType判断文档类型是否为text/html
-				$contentType = strtr(strtoupper($responseheader['content_type']), array(' '=>'','\t'=>'','@'=>''));
-				if(strpos($contentType,'TEXT/HTML')===false){
-					$response['code'] = 800;
-					throw new Exception("doctype is not html.");
-				}
-
-				//如果能够从HtmlHead中的meta标签获取charset，若未检出则使用header或函数检测charset并转换为utf-8
-				$autocharset=self::contentTypeFromMeta($htmltext)[1];
-				$charset = $autocharset==null? '' : strtoupper($autocharset);
-				if($charset == ''){
-					//使用HttpHeader中的ContentType获取chaeset
-					foreach (explode(";",$contentType) as $ct) {
-					$ctkv=explode("=",$ct);
-					if(count($ctkv)==2 && $ctkv[0]=='CHARSET'){
-							$charset=$ctkv[1];
-							break;
-						}
-					}
-					//使用函数检测charset
-					$validcharsets=array("UTF-8","GB2312","GBK","ISO-8859-1");
-					if(!in_array($charset,$validcharsets)){
-						$charset = mb_detect_encoding($htmltext,$validcharsets);
-					}
-					//如果未检测出字符编码则返回错误，否则字符集转换为UTF-8
-					if($charset ==''){
-						$response['code'] = 600;
-						throw new Exception("unknown charset.");
-					}
-				}
-				if($charset != "UTF-8"){
-					$htmltext = mb_convert_encoding($htmltext,'UTF-8',$charset);
-				}
-				$response['charset']=$charset;
-
-				//phpQuery不会过滤js与css，需要手动去除。
-				$reg=array("'<script[^>]*?>.*?</script>'si", "'<style[^>]*?>.*?</style>'si");
-				$htmltext = preg_replace($reg," ", $htmltext);
-
-				//将&amp;替换成为&，防止连接中的参数出错
-				$htmltext = str_ireplace("&amp;","&",$htmltext);
-
-				//使用phpQuery解析dom
-				$htmldom= phpQuery::newDocument($htmltext);
-				unset($htmltext);
-
-				//获取标题
-				$title=$htmldom['title'];
-				$response['title']= $title==null? "":trim($title->text());
-				if($response['title']==''){
-					$response['code'] = 600;
-					throw new Exception("site has no title.");
-				}
-
-				//获取html中纯文本内容
-				$body=$htmldom['body'];
-				if($body==null){
-					$response['code'] = 600;
-					throw new Exception("site has no body.");
-				}
-				$text=self::textFilter($body->text());
-				$response['text']=empty($text)?$response['title']:$text;
-				unset($body);
-				unset($text);
-
-				//提取文本耗时
-				$response['timeinfo']['extarct']=round(microtime(true)-$now,3);
-				$now=microtime(true);
-
-				//解析网页中的超链接
-				$response['links']=array();
-				if($level>0 || $istest){
-					$baseurl=self::urlSplit($response['url']);
-					$response['links']=array();
-					foreach ($htmldom['a'] as $a) {
-						$href=$a->getAttribute('href');
-				    	$link=self::transformHref($href, $baseurl);
-				    	if($link!=false){
-				    		if($istest){
-				    			if(!isset($response['links'][$href])){
-				    				$response['links'][$href]=$link;
-				    			}
-							}
-							else{
-								if(!in_array($link,$response['links'])){
-				    				$response['links'][]=$link;
-				    			}
-							}
-				    	}
-				    }
-			    }
-			    //解析超连接耗时
-				$response['timeinfo']['findlinks']=round(microtime(true)-$now,3);
-				unset($htmldom);
-			}
-			else{
+			if(intval($response['code'])/100!=2) {
 				throw new Exception();
 			}
+
+			//根据contentType判断文档类型
+			$contentType = strtr(strtoupper($responseheader['content_type']), array(' '=>'','\t'=>'','@'=>''));
+			if(strpos($contentType,'TEXT/HTML')!==false){
+				$response['type']='html';
+			}
+			else{
+				$response['code'] = 800;
+				throw new Exception("unknown contenttype.");
+			}
+
+			//使用ContentType获取charset信息
+			$charset='';
+			foreach (explode(";",$contentType) as $ct) {
+				$ctkv=explode("=",$ct);
+				if(count($ctkv)==2 && $ctkv[0]=='CHARSET'){
+					$charset=$ctkv[1];
+					break;
+				}
+			}
+			$response['charset']=$charset;
 		}
 		catch(Exception $e) {
 			if($response['code']<600){
@@ -238,9 +150,103 @@ class UrlAnalyzer{
 		finally{
 			curl_close($ch);
 			unset($ch);
-			phpQuery::$documents = array();
 			$response['level']=$level;
 			return $response;
+		}
+	}
+
+	//解析html内容，返回title，text，links，charset
+	static function htmlExtract($htmltext, $level, $url, $ctCharset) {
+		$urlinfo=array();
+		$now=microtime(true);
+		try{
+			//判断网页是否为空
+			if(strlen($htmltext)==0){
+				throw new Exception("empty html");
+			}
+			//判断是网页是否过大，避免内存溢出以及存入es过慢
+			if(strlen($htmltext)>$GLOBALS['MAX_HTMLSISE']){
+				throw new Exception("html is too long. (doc size=".strlen($htmltext).", max size=".$GLOBALS['MAX_HTMLSISE'].")");
+			}
+
+			//如果能够从HtmlHead中的meta标签获取charset，若未检出则使用contenttype中的charset或函数检测charset并转换为utf-8
+			$autocharset=self::contentTypeFromMeta($htmltext)[1];
+			$charset = $autocharset==null? '' : strtoupper($autocharset);
+			if($charset == ''){
+				$charset=$ctCharset;
+				$validcharsets=array("UTF-8","GB2312","GBK","ISO-8859-1");
+				//使用函数检测charset
+				if(!in_array($charset,$validcharsets)){
+					$charset = mb_detect_encoding($htmltext,$validcharsets);
+				}
+				//如果未检测出字符编码则返回错误，否则字符集转换为UTF-8
+				if($charset ==''){
+					throw new Exception("unknown charset.");
+				}
+			}
+			if($charset != "UTF-8"){
+				$htmltext = mb_convert_encoding($htmltext,'UTF-8',$charset);
+			}
+			$urlinfo['charset']=$charset;
+
+			//phpQuery不会过滤js与css，需要手动去除。
+			$reg=array("'<script[^>]*?>.*?</script>'si", "'<style[^>]*?>.*?</style>'si");
+			$htmltext = preg_replace($reg," ", $htmltext);
+			//将&amp;替换成为&，防止连接中的参数出错
+			$htmltext = str_ireplace("&amp;","&",$htmltext);
+
+			//使用phpQuery解析dom
+			$htmldom= phpQuery::newDocument($htmltext);
+			unset($htmltext);
+
+			//获取标题
+			$title=$htmldom['title'];
+			$urlinfo['title']= $title==null? "":trim($title->text());
+			if($urlinfo['title']==''){
+				throw new Exception("site has no title.");
+			}
+
+			//获取html中纯文本内容
+			$body=$htmldom['body'];
+			if($body==null){
+				throw new Exception("site has no body.");
+			}
+			$text=self::textFilter($body->text());
+			$urlinfo['text']=empty($text)?$urlinfo['title']:$text;
+			unset($body);
+			unset($text);
+
+			//提取文本耗时
+			$urlinfo['timeinfo']['extract']=round(microtime(true)-$now,3);
+			$now=microtime(true);
+
+			//解析网页中的超链接
+			$urlinfo['links']=array();
+			if($level>0){
+				$baseurl=self::urlSplit($url);
+				foreach ($htmldom['a'] as $a) {
+					$href=$a->getAttribute('href');
+					$link=self::transformHref($href, $baseurl);
+					if($link!=false){
+						if(!in_array($link,$urlinfo['links'])){
+							$urlinfo['links'][]=$link;
+						}
+					}
+				}
+			}
+			//解析超连接耗时
+			$urlinfo['timeinfo']['findlinks']=round(microtime(true)-$now,3);
+			unset($htmldom);
+		}
+		catch(Exception $e) {
+			$urlinfo['code']=600;
+			$urlinfo['error']=$e->getMessage();
+		}
+		finally{
+			phpQuery::$documents = array();
+			$urlinfo['url']=$url;
+			$urlinfo['level']=$level;
+			return $urlinfo;
 		}
 	}
 

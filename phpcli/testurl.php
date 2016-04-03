@@ -6,15 +6,15 @@ if(count($argv)<2){
 	die("No url was given.\n");
 }
 $url=$argv[1];
-$urlinfo=UrlAnalyzer::getInfoOnce($url,0,null,true);
+$urlinfo=UrlAnalyzer::getUrlInfo($url,1,null,true);
 
 if(!isset($urlinfo['error'])){
 
 	if(in_array("-l",$argv)){
 		if(count($urlinfo['links'])>0){
 			echo "+--------------------------------------------------------------------------------------------------------------------------------------+\n";
-			foreach ($urlinfo['links'] as $href=>$link) {
-				echo "| Href: {$href}\n| Link: {$link}\n";
+			foreach ($urlinfo['links'] as $link) {
+				echo "| {$link}\n";
 				echo "+--------------------------------------------------------------------------------------------------------------------------------------+\n";
 			}
 		}
@@ -30,7 +30,7 @@ if(!isset($urlinfo['error'])){
 	echo "Title: ".$urlinfo['title']."\n";
 	echo "Charset: ".$urlinfo['charset']."\n";
 	echo "Links count: ".count($urlinfo['links'])."\n";
-	echo "Time: ".round(microtime(true)-$now,3)."s ( download:".$urlinfo['timeinfo']['download']."s extarct:".$urlinfo['timeinfo']['extarct']."s findhref:".$urlinfo['timeinfo']['findlinks']."s )\n";
+	echo "Time: ".round(microtime(true)-$now,3)."s ( download:".$urlinfo['timeinfo']['download']."s extarct:".$urlinfo['timeinfo']['extarct']."s findlinks:".$urlinfo['timeinfo']['findlinks']."s )\n";
 
 	if(in_array("-w",$argv)){
 		EsConnector::connect();
