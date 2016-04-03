@@ -27,7 +27,7 @@
 				<div class="col-md-12">
 					<h4  style="display:inline;">文档数量信息</h4>&nbsp;&nbsp;
 					<button type="button" class="btn btn-info btn-xs hbtn" onclick="showdoc()">
-						<span class="fa fa-area-chart"></span>&nbsp;&nbsp;日志监控
+						<span class="fa fa-line-chart"></span>&nbsp;&nbsp;日志监控
 					</button>
 					<br><br>
 					<table class="table">
@@ -43,13 +43,13 @@
 				<div class="col-md-12">
 					<h4  style="display:inline;">队列任务信息</h4>&nbsp;&nbsp;
 					<button type="button" class="btn btn-warning btn-xs hbtn" onclick="showtask()">
-						<span class="fa fa-list-ul"></span>&nbsp;&nbsp;实时进度
-						&nbsp;&nbsp;<span class="badge" id='onprosess' style="margin-top: -2px;">loading</span>
+						<span class="fa fa-list-ul"></span>&nbsp;&nbsp;实时进度&nbsp;&nbsp;
+						<span class="badge" id='onprosess' style="margin-top: -2px;">loading</span>
 					</button>
 					<br><br>
 					<table class="table" id="queueinfo">
-						<tr><td style="width:200px;">待爬取新网页数量</td><td id="newtask">loading</td></tr>
-						<tr><td>需要更新网页数量</td><td id="updatetask">loading</td></tr>
+						<tr><td style="width:200px;">待爬取新网页数量</td><td id="newtask"><span class="fa fa-spinner fa-spin"></span></td></tr>
+						<tr><td>需要更新网页数量</td><td id="updatetask"><span class="fa fa-spinner fa-spin"></span></td></tr>
 					</table>
 				</div>
 			</div>
@@ -58,11 +58,13 @@
 				<div class="col-md-12">
 					<h4  style="display:inline;">爬虫集群列表</h4>&nbsp;&nbsp;
 					<button class="btn btn-danger btn-xs hbtn" type="button" onclick="showspiders()">
-						<span class="fa fa-server"></span>&nbsp;&nbsp;节点负载
-						&nbsp;&nbsp;<span class="badge" id='spidercount' style="margin-top: -2px;">loading</span>
+						<span class="fa fa-server"></span>&nbsp;&nbsp;节点负载&nbsp;&nbsp;
+						<span class="badge" id='spidercount' style="margin-top: -2px;">loading</span>
 					</button>
 					<br><br>
-					<table class="table" id="spiderlist"></table>
+					<table class="table" id="spiderlist">
+						<tr><td>正在获取在线爬虫列表 <span class="fa fa-spinner fa-spin"></span></td></tr>
+					</table>
 				</div>
 			</div>
 		</div>

@@ -38,7 +38,7 @@ function showspiders(){
 }
 
 //加载队列与在线爬虫列表
-var spiderinfoh='<tr><th width="80px">机器标识</th> <th width="90px">IP</th> <th width="80px">进程</th> <th width="40px">负载</th></tr>';
+var spiderinfohead ='<tr><th width="80px">机器标识</th> <th width="90px">IP</th> <th width="80px">进程</th> <th width="40px">负载</th></tr>';
 var spiderinfo='<tr><td>{$name}</td> <td>{$ip}</td> <td>{$tasks}</td><td><div style="width: 12px;height: 12px;border-radius:6px;background:{$color}"></div></td> </tr>';
 function loadQueueInfo(){
     $.get('/json/queueinfo.php?r='+Math.random(),function(data){
@@ -48,8 +48,8 @@ function loadQueueInfo(){
 
         //在线爬虫机器
         $('#spidercount').html(data.spiders.length);
-        slist=spiderinfoh;
         tasks=0;
+        slist=spiderinfohead;
         for(var i=0;i<data.spiders.length;i++){
             if(data.spiders[i].sysload.cpuload>5 || data.spiders[i].sysload.cpuused>90  || (data.spiders[i].sysload.memused/data.spiders[i].sysload.memtotal)>0.9){
                 color='red';
@@ -66,8 +66,13 @@ function loadQueueInfo(){
             slist+=spiderinfo.replace('{$name}',data.spiders[i].name).replace('{$ip}',data.spiders[i].ip).replace('{$tasks}',data.spiders[i].tasks+'/'+data.spiders[i].sysload.running+'/'+data.spiders[i].handler).replace('{$color}',color);
             tasks+=parseInt(data.spiders[i].tasks);
         }
-        $('#spiderlist').html(slist);
         $('#onprosess').html(tasks);
+        if(data.spiders.length>0){
+            $('#spiderlist').html(slist);
+        }
+        else{
+            $('#spiderlist').html('<tr><td>暂无在线爬虫 <span class="fa fa-frown-o"></td></tr>');
+        }
         setTimeout("loadQueueInfo()",1000);
     });
 }
