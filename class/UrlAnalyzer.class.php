@@ -331,7 +331,7 @@ class UrlAnalyzer{
 		//获取文档名
 		$filepos=strrpos($baseurl,"/");
 		if($filepos!==false){
-			$info['file']= substr($baseurl,$filepos+1)==false? "":substr($baseurl,$filepos+1);
+			$info['file']= substr($baseurl,$filepos+1)===false? "":substr($baseurl,$filepos+1);
 			$baseurl=substr($baseurl,0,$filepos+1);
 		}
 		else{

@@ -68,7 +68,9 @@ $GLOBALS['NOTTRACE_HAS'] = array(
 	'm.baidu.com',
 	'www.sogou.com',
 	'www.so.com',
-	'auto.163.com'
+	'auto.163.com',
+	'ks.pcgames.com.cn',
+	'tieba.baidu.com/f/index/forumpark'
 );
 
 //--------------------------------- 任务队列规则配置 --------------------------------------
